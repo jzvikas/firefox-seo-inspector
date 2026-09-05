@@ -17,6 +17,7 @@ function renderAll() {
   renderLinks();
   renderImagesNetwork();
   renderProduct();
+  renderCategory();
   renderSchema();
   renderSocial();
   renderCompare();
