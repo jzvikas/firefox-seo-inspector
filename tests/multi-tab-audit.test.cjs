@@ -22,6 +22,12 @@ function report(overrides) {
       severityCounts: { critical: 0, warning: 1 },
       indexability: { verdict: 'Indexable' },
     }, extra.evaluation || {}),
+    pageType: extra.pageType || {
+      primary: 'product',
+      label: 'Product',
+      confidence: 'high',
+      traits: { faceted: false, pagination: false },
+    },
   };
 }
 
@@ -35,13 +41,19 @@ test('selectTabs keeps unique HTTP/HTTPS tabs and enforces cap', () => {
   assert.deepEqual(rows.map((item) => item.id), [1]);
 });
 
-test('summarizeReport extracts bounded SEO fields and issue counts', () => {
-  const row = MultiTabAudit.summarizeReport({ id: 7, url: 'https://example.com/a', title: 'Tab A', windowId: 2 }, report());
+test('summarizeReport extracts bounded SEO and page-type fields with issue counts', () => {
+  const row = MultiTabAudit.summarizeReport({ id: 7, url: 'https://example.com/a', title: 'Tab A', windowId: 2 }, report({
+    pageType: { primary: 'category', label: 'Category / listing', confidence: 'high', traits: { faceted: true, pagination: true } },
+  }));
   assert.equal(row.url, 'https://example.com/a');
   assert.equal(row.statusCode, 200);
   assert.equal(row.title, 'Page A');
   assert.equal(row.h1, 'Heading A');
   assert.equal(row.h1Count, 1);
+  assert.equal(row.pageType, 'Category / listing');
+  assert.equal(row.pageTypePrimary, 'category');
+  assert.equal(row.pageTypeConfidence, 'high');
+  assert.equal(row.pageTraits, 'Faceted · Pagination');
   assert.equal(row.indexability, 'Indexable');
   assert.equal(row.issueCount, 1);
   assert.equal(row.warnings, 1);
@@ -52,6 +64,7 @@ test('unavailableRow preserves tab identity without inventing audit facts', () =
   assert.equal(row.available, false);
   assert.equal(row.url, 'https://example.com/');
   assert.equal(row.statusCode, 0);
+  assert.equal(row.pageType, '');
   assert.equal(row.indexability, 'Unknown');
   assert.equal(row.error, 'no-content-script');
 });
@@ -91,26 +104,28 @@ test('duplicateSummary exposes grouped duplicate metadata', () => {
   assert.equal(result.rows.every((row) => row.duplicateTitle), true);
 });
 
-test('filterRows supports query indexability issue and duplicate filters together', () => {
+test('filterRows supports query indexability issue duplicate and page-type text together', () => {
   const rows = [
     Object.assign(MultiTabAudit.summarizeReport({ id: 1 }, report()), { duplicateTitle: true }),
-    Object.assign(MultiTabAudit.summarizeReport({ id: 2 }, report({ facts: { url: 'https://example.com/b', title: 'Other' }, evaluation: { issues: [], severityCounts: {}, indexability: { verdict: 'Noindex' } } })), { duplicateTitle: false }),
+    Object.assign(MultiTabAudit.summarizeReport({ id: 2 }, report({ facts: { url: 'https://example.com/b', title: 'Other' }, evaluation: { issues: [], severityCounts: {}, indexability: { verdict: 'Noindex' } }, pageType: { primary: 'article', label: 'Article / blog', confidence: 'high', traits: {} } })), { duplicateTitle: false }),
   ];
-  const filtered = MultiTabAudit.filterRows(rows, { query: 'page a', indexability: 'Indexable', issuesOnly: true, duplicatesOnly: true });
+  const filtered = MultiTabAudit.filterRows(rows, { query: 'product', indexability: 'Indexable', issuesOnly: true, duplicatesOnly: true });
   assert.deepEqual(filtered.map((row) => row.tabId), [1]);
 });
 
-test('sortRows handles numeric and text fields deterministically', () => {
+test('sortRows handles numeric text and page-type fields deterministically', () => {
   const rows = [
-    Object.assign(MultiTabAudit.summarizeReport({ id: 1 }, report()), { score: 80, url: 'https://b.example/' }),
-    Object.assign(MultiTabAudit.summarizeReport({ id: 2 }, report()), { score: 95, url: 'https://a.example/' }),
+    Object.assign(MultiTabAudit.summarizeReport({ id: 1 }, report()), { score: 80, url: 'https://b.example/', pageType: 'Product' }),
+    Object.assign(MultiTabAudit.summarizeReport({ id: 2 }, report()), { score: 95, url: 'https://a.example/', pageType: 'Article / blog' }),
   ];
   assert.deepEqual(MultiTabAudit.sortRows(rows, 'score', 'desc').map((row) => row.tabId), [2, 1]);
   assert.deepEqual(MultiTabAudit.sortRows(rows, 'url', 'asc').map((row) => row.tabId), [2, 1]);
+  assert.deepEqual(MultiTabAudit.sortRows(rows, 'pageType', 'asc').map((row) => row.tabId), [2, 1]);
 });
 
-test('CSV escaping preserves commas quotes and newlines', () => {
-  const csv = MultiTabAudit.toCsv([{ url: 'https://example.com/a,b', title: 'A "quoted" title', description: 'one\ntwo' }]);
+test('CSV escaping preserves commas quotes newlines and page-type columns', () => {
+  const csv = MultiTabAudit.toCsv([{ url: 'https://example.com/a,b', title: 'A "quoted" title', description: 'one\ntwo', pageType: 'Product', pageTypeConfidence: 'high' }]);
+  assert.match(csv, /Page type,Page type confidence,Page traits/);
   assert.match(csv, /"https:\/\/example\.com\/a,b"/);
   assert.match(csv, /"A ""quoted"" title"/);
   assert.match(csv, /"one\ntwo"/);
