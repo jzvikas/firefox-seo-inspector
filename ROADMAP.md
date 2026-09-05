@@ -9,7 +9,7 @@ This roadmap keeps Firefox SEO Inspector focused on fast, local-first technical 
 - Source is authoritative; generated XPI artifacts must match the source for the same version.
 - New behavior should be covered by tests before release.
 - Prefer actionable diagnostics over raw data dumps.
-- Keep the sidebar fast enough to use continuously while browsing.
+- Keep the Inspector UI fast enough to use continuously while browsing.
 
 ## v0.2.0 — Indexability and technical SEO debugger
 
@@ -294,23 +294,23 @@ Goal: move from single-page inspection to small-site and e-commerce workflows wi
 
 ### Category/listing checks
 
-- [ ] Category canonical.
-- [ ] Product-link count.
-- [ ] Empty/thin category warning.
-- [ ] Pagination consistency.
-- [ ] Faceted navigation detection.
+- [x] Category canonical.
+- [x] Product-link count.
+- [x] Empty/thin category warning.
+- [x] Pagination consistency.
+- [x] Faceted navigation detection.
 
 ### Faceted navigation
 
-- [ ] Classify filter, sort, pagination, tracking, and session-like query parameters.
+- [x] Classify filter, sort, pagination, tracking, and session-like query parameters.
 - [ ] Canonical and robots checks for parameterized URLs.
-- [ ] Index-bloat risk warning.
-- [ ] Highlight parameterized internal links.
+- [x] Index-bloat risk warning.
+- [x] Highlight parameterized internal links.
 
 ### Pagination
 
-- [ ] Detect current page number and neighboring pagination links.
-- [ ] Check canonical behavior on page 2+.
+- [x] Detect current page number and neighboring pagination links.
+- [x] Check canonical behavior on page 2+.
 - [ ] Detect duplicate title/description patterns across opened/crawled pages.
 - [ ] Broken pagination link detection.
 
@@ -318,7 +318,7 @@ Goal: move from single-page inspection to small-site and e-commerce workflows wi
 
 - [x] A small site section can be audited locally without an external crawler.
 - [x] Crawl limits prevent accidental unbounded scans.
-- [ ] E-commerce checks stay platform-neutral and do not contain private/project-specific rules.
+- [x] E-commerce checks stay platform-neutral and do not contain private/project-specific rules.
 
 ## v1.0.0 — Stable daily-use release
 
