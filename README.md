@@ -135,9 +135,20 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Legacy single-snapshot `snapshot:<URL>` storage is migrated automatically into the versioned history format after the replacement history is safely written.
 - Snapshot history uses only the existing local extension storage permission and never uploads snapshots.
 
+### Regression detection
+
+- New version-2 snapshots retain stable summaries for metadata, indexability, heading structure, links, images, schema, hreflang, HTTP metadata, performance, and security without storing full resource inventories.
+- The Compare panel classifies detected differences as **regressions**, **improvements**, or other changes and shows before/after values with their audit category.
+- Critical regressions include newly non-indexable pages, healthy HTTP responses becoming errors, new broken checked links/images, new invalid JSON-LD, active mixed content, and newly introduced noindex directives.
+- Security-header state regressions, image SEO issue increases, redirect-link increases, and SEO score drops are called out separately from neutral content changes.
+- Performance regressions use conservative absolute-plus-relative thresholds so normal timing/resource noise is not reported as a deployment regression. TTFB, navigation duration, request count, known bytes, third-party load, and DOM size/depth are covered.
+- Link/image broken-state comparisons are made only when the corresponding on-demand network check was run in both snapshots; missing checks never become invented zero-error baselines.
+- Existing version-1 snapshots remain comparable for their older metadata/count fields. Missing version-2 performance/security/network fields are skipped instead of generating false regressions.
+- Heading and hreflang snapshot inventories are bounded before local storage, while snapshot history keeps the existing 50-record-per-URL limit.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is richer regression detection, followed by page/tab comparison workflows.
+See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is page/tab comparison workflows, followed by local custom rules and personal audit configuration.
 
 ## Install for development
 
@@ -163,7 +174,7 @@ The Content panel performs a bounded local DOM scan and does not make network re
 
 The Security panel reads current-page DOM/resource references plus selected security headers already observed on the main document. It does not fetch external security databases or issue extra security-audit requests. Cookie Secure/HttpOnly/SameSite inspection is not enabled, so the extension does not request cookie access for this feature.
 
-Snapshot history is stored only in `browser.storage.local`. The history format is versioned, capped at 50 records per exact normalized URL, and can be explicitly exported/imported by the user. No snapshot data is sent anywhere by the extension.
+Snapshot history and regression summaries are stored only in `browser.storage.local`. The history is capped at 50 records per exact normalized URL. Regression snapshots store bounded summaries rather than full performance/resource inventories, and on-demand network status counts are included only when those checks actually ran. No snapshot or regression data is sent anywhere by the extension.
 
 **Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
 
