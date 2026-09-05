@@ -16,6 +16,23 @@ Domain profiles are also stored only in `browser.storage.local`. A profile conta
 
 HTTP response metadata for the current browser session is held in Firefox `storage.session`, which is memory-backed and cleared when the browser session ends.
 
+## Content-script recovery and the scripting permission
+
+The extension requests Firefox's `scripting` permission in addition to the existing HTTP/HTTPS host permissions. It is used only to restore the extension's own packaged content-script bundle in the currently inspected HTTP/HTTPS tab when that tab no longer has a live Inspector content-script connection, for example after the extension itself is reloaded or updated while the page remains open.
+
+Before any recovery injection, the Inspector sends a local ping to the tab. If the content script answers, nothing is injected. If the ping fails, Firefox `scripting.executeScript` is asked to inject only the JavaScript files already declared in this extension's own manifest. The content bootstrap is idempotent so a later normal manifest injection does not register a second Inspector runtime.
+
+This recovery action:
+
+- does not fetch or execute remote code;
+- does not add a new host permission beyond the existing HTTP/HTTPS scope;
+- does not inject into `about:`, `moz-extension:`, local-file, or other unsupported URL schemes;
+- does not bypass Firefox-protected or restricted pages when Firefox refuses extension injection;
+- does not upload page content or runtime errors;
+- keeps bounded, sanitized runtime error summaries only in the Inspector window's in-memory state for the current session.
+
+If Firefox blocks injection, the UI reports a page-access/restricted-page state instead of claiming that a normal page reload will necessarily fix it.
+
 ## External SEO checks
 
 Link, image, canonical, hreflang, sitemap, crawler-lite, and explicit URL-to-URL comparison checks contact the URLs that must be inspected. These requests:
