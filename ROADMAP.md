@@ -112,12 +112,12 @@ Goal: explain what makes a page heavy, fragile, or technically weak.
 
 ### JavaScript and CSS
 
-- [ ] Script count, inline/external split, async/defer/module flags.
-- [ ] Duplicate script detection.
-- [ ] Third-party script grouping.
-- [ ] Large JavaScript resource warnings.
-- [ ] Stylesheet count and duplicate stylesheet detection.
-- [ ] Large CSS resource warnings.
+- [x] Script count, inline/external split, async/defer/module flags.
+- [x] Duplicate script detection.
+- [x] Third-party script grouping.
+- [x] Large JavaScript resource warnings.
+- [x] Stylesheet count and duplicate stylesheet detection.
+- [x] Large CSS resource warnings.
 
 ### Third-party resources
 

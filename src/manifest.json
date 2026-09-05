@@ -54,6 +54,7 @@
         "lib/indexability.js",
         "lib/performance-audit.js",
         "lib/performance-hints.js",
+        "lib/asset-audit.js",
         "lib/page-extractor.js",
         "content/content.js"
       ],
