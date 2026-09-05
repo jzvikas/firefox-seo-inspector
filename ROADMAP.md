@@ -127,12 +127,12 @@ Goal: explain what makes a page heavy, fragile, or technically weak.
 
 ### Content inspection
 
-- [ ] Visible text word count.
-- [ ] Raw HTML vs rendered text count.
-- [ ] Thin-content warning.
-- [ ] Hidden-content heuristics.
-- [ ] Language consistency checks.
-- [ ] Heading-tree quality checks and skipped-level warnings.
+- [x] Visible text word count.
+- [x] Raw HTML vs rendered text count.
+- [x] Thin-content warning.
+- [x] Hidden-content heuristics.
+- [x] Language consistency checks.
+- [x] Heading-tree quality checks and skipped-level warnings.
 
 ### Link audit improvements
 

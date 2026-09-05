@@ -21,6 +21,12 @@ All notable changes to this project are documented here.
 - Third-party Resource Timing audit grouped by hostname with request counts, known/unknown byte coverage, resource-type mix, and bounded sample URLs.
 - Local heuristic classification of common analytics, tag-manager, widget, advertising, and CDN resource hosts without external lookups or additional requests.
 - Automated tests for exact/subdomain matching, local pattern classification, unknown-size preservation, bounded samples, deterministic ordering, and category summaries.
+- Dedicated Content panel with visible/DOM/hidden word counts, a 25,000-node safety cap, and an explicitly heuristic low-word-count warning.
+- On-demand raw HTML versus rendered DOM text-count comparison, reusing the documented same-page authenticated source fetch only when requested.
+- Hidden-content technical signals for `hidden`, `aria-hidden`, `display:none`, `visibility:hidden`, and `content-visibility:hidden`, with bounded element samples and no spam-intent inference.
+- Language consistency checks across HTML `lang`, `Content-Language`, and self-referencing hreflang declarations.
+- Heading-quality diagnostics for H1–H6 counts, missing/multiple H1, empty headings, and skipped heading levels.
+- Automated tests for Unicode word counting, excluded non-content tags, hidden-content accounting, visibility styles, node caps, language consistency, heading quality, and thin-content heuristics.
 
 ## [0.2.0] - 2026-09-05
 

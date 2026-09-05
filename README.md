@@ -95,9 +95,19 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Uses local heuristics to identify common analytics, tag-manager, widget, advertising, and CDN hosts; unrecognized hosts remain explicitly unclassified.
 - Uses only already-collected local Resource Timing data and makes no additional requests.
 
+### Content inspection
+
+- Dedicated Content tab with visible word count, DOM text count, hidden-text count, and a 25,000-node scan safety cap.
+- Generic low-word-count warning below 150 visible words; it is explicitly presented as a heuristic, not a search-engine rule.
+- On-demand raw HTML versus rendered DOM text-count comparison.
+- Technical hidden-content signals for `hidden`, `aria-hidden`, `display:none`, `visibility:hidden`, and `content-visibility:hidden`, with bounded element samples.
+- HTML `lang`, `Content-Language`, and self-referencing hreflang consistency checks.
+- Heading-quality summary with H1–H6 counts, missing/multiple H1, empty headings, and skipped levels.
+- Hidden-content signals are not labeled as spam and do not attempt to infer intent.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestones focus on content diagnostics, link-audit intelligence, and security inspection before moving into regression and multi-page workflows.
+See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestones focus on security inspection and link-audit intelligence before moving into regression and multi-page workflows.
 
 ## Install for development
 
@@ -119,7 +129,9 @@ External link, image, canonical, hreflang, and sitemap checks are bounded and us
 
 The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints, asset inspection, and third-party grouping. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. Third-party service categories are local heuristics rather than network lookups. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
 
-**Compare raw HTML** is intentionally different: when explicitly requested, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
+The Content panel performs a bounded local DOM scan and does not make network requests during normal inspection. Hidden-content output is limited to technical visibility signals and bounded element labels; it does not infer spam or intent.
+
+**Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
 
 ## Development
 

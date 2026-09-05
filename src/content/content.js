@@ -27,7 +27,12 @@ async function analyzeDocument(doc, locationLike, responseMeta) {
   }, performance);
   const assetAudit = AssetAudit.collect(doc, pageUrl, performance);
   const thirdPartyAudit = ThirdPartyAudit.collect(performance);
-  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: context, performance, performanceHints, assetAudit, thirdPartyAudit };
+  const contentAudit = ContentAudit.collect(doc, {
+    facts,
+    responseMeta: responseMeta || null,
+    getComputedStyle: typeof window.getComputedStyle === 'function' ? window.getComputedStyle.bind(window) : null,
+  });
+  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: context, performance, performanceHints, assetAudit, thirdPartyAudit, contentAudit };
 }
 
 async function analyzeCurrentPage() {
@@ -94,7 +99,12 @@ async function fetchRawReport() {
   const facts = PageExtractor.extract(rawDocument, rawUrl, { performance: null });
   const evaluation = SeoCore.evaluateFacts(facts, responseMeta);
   evaluation.indexability = Indexability.analyze(facts, responseMeta);
-  return { facts, evaluation, responseMeta, pageContext: pageContext() };
+  const contentAudit = ContentAudit.collect(rawDocument, {
+    facts,
+    responseMeta,
+    detectVisibility: false,
+  });
+  return { facts, evaluation, responseMeta, pageContext: pageContext(), contentAudit };
 }
 
 function notifyPageChanged() {
@@ -119,7 +129,7 @@ function setWatching(enabled) {
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['content', 'href', 'rel', 'name', 'property', 'lang', 'alt', 'src', 'srcset', 'loading', 'width', 'height', 'async', 'defer', 'media', 'crossorigin', 'type', 'nomodule', 'disabled'],
+    attributeFilter: ['content', 'href', 'rel', 'name', 'property', 'lang', 'alt', 'src', 'srcset', 'loading', 'width', 'height', 'async', 'defer', 'media', 'crossorigin', 'type', 'nomodule', 'disabled', 'hidden', 'aria-hidden', 'style', 'class'],
   });
 }
 
