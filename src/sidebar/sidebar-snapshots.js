@@ -5,6 +5,7 @@ const snapshotUiState = {
   loaded: false,
   loading: false,
   history: SnapshotHistory.emptyHistory(),
+  activeUrl: '',
   comparedId: null,
   message: '',
   messageKind: '',
@@ -12,6 +13,16 @@ const snapshotUiState = {
 
 function snapshotCurrentUrl() {
   return state.report && state.report.facts ? SnapshotHistory.normalizeUrl(state.report.facts.url) : '';
+}
+
+function syncSnapshotUrlState() {
+  const url = snapshotCurrentUrl();
+  if (snapshotUiState.activeUrl === url) return;
+  snapshotUiState.activeUrl = url;
+  snapshotUiState.comparedId = null;
+  snapshotUiState.message = '';
+  snapshotUiState.messageKind = '';
+  state.snapshotDiff = undefined;
 }
 
 function snapshotRecordId() {
@@ -161,8 +172,14 @@ function appendSnapshotControls(panel) {
   saveButton.type = 'button';
   saveButton.addEventListener('click', async () => {
     saveButton.disabled = true;
-    try { await saveSnapshot(nameInput.value); }
-    finally { saveButton.disabled = false; }
+    try {
+      await saveSnapshot(nameInput.value);
+    } catch (_error) {
+      snapshotSetMessage('Snapshot could not be saved to local storage.', 'critical');
+      renderCompare();
+    } finally {
+      saveButton.disabled = false;
+    }
   });
   controls.appendChild(saveButton);
 
@@ -232,12 +249,26 @@ function appendSnapshotTable(panel) {
 
     const baseline = el('button', '', page.baselineId === record.id ? 'Clear baseline' : 'Set baseline');
     baseline.type = 'button';
-    baseline.addEventListener('click', () => setSnapshotBaseline(page.baselineId === record.id ? null : record.id).catch(() => {}));
+    baseline.addEventListener('click', async () => {
+      try {
+        await setSnapshotBaseline(page.baselineId === record.id ? null : record.id);
+      } catch (_error) {
+        snapshotSetMessage('Baseline change could not be saved to local storage.', 'critical');
+        renderCompare();
+      }
+    });
     actionsCell.appendChild(baseline);
 
     const remove = el('button', '', 'Delete');
     remove.type = 'button';
-    remove.addEventListener('click', () => deleteSnapshotRecord(record.id).catch(() => {}));
+    remove.addEventListener('click', async () => {
+      try {
+        await deleteSnapshotRecord(record.id);
+      } catch (_error) {
+        snapshotSetMessage('Snapshot deletion could not be saved to local storage.', 'critical');
+        renderCompare();
+      }
+    });
     actionsCell.appendChild(remove);
     row.appendChild(actionsCell);
     body.appendChild(row);
@@ -288,8 +319,9 @@ renderCompare = function renderSnapshotHistoryCompare() {
   const panel = document.getElementById('compare');
   clear(panel);
   if (!state.report) return panel.appendChild(el('div', 'empty', 'No audit data.'));
+  syncSnapshotUrlState();
   if (!snapshotUiState.loaded) {
-    panel.appendChild(el('div', 'empty', snapshotUiState.loading ? 'Loading snapshot history…' : 'Loading snapshot history…'));
+    panel.appendChild(el('div', 'empty', 'Loading snapshot history…'));
     loadSnapshotHistory().catch(() => {});
     return;
   }
