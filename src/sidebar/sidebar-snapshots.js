@@ -10,6 +10,7 @@ const snapshotUiState = {
   regression: null,
   message: '',
   messageKind: '',
+  schemaStatus: null,
 };
 
 function snapshotCurrentUrl() {
@@ -37,7 +38,14 @@ function snapshotSetMessage(message, kind) {
   snapshotUiState.messageKind = kind || '';
 }
 
+function snapshotWriteFailure(error, fallback) {
+  return storageSchemaReadOnlyMessage(snapshotUiState.schemaStatus)
+    || (error && error.message ? String(error.message) : '')
+    || fallback;
+}
+
 async function persistSnapshotHistory() {
+  snapshotUiState.schemaStatus = await requireWritableStorageSchema();
   const clean = SnapshotHistory.sanitizeHistory(snapshotUiState.history);
   snapshotUiState.history = clean;
   await browser.storage.local.set({ [SnapshotHistory.STORAGE_KEY]: clean });
@@ -47,14 +55,12 @@ async function loadSnapshotHistory() {
   if (snapshotUiState.loading || snapshotUiState.loaded) return;
   snapshotUiState.loading = true;
   try {
-    const stored = await browser.storage.local.get(null);
-    const current = SnapshotHistory.sanitizeHistory(stored[SnapshotHistory.STORAGE_KEY]);
-    const migrated = SnapshotHistory.migrateLegacy(stored, current);
-    snapshotUiState.history = migrated.history;
-    if (migrated.migratedKeys.length) {
-      await browser.storage.local.set({ [SnapshotHistory.STORAGE_KEY]: migrated.history });
-      await browser.storage.local.remove(migrated.migratedKeys);
-      snapshotSetMessage(`Migrated ${migrated.migratedKeys.length} legacy snapshot${migrated.migratedKeys.length === 1 ? '' : 's'} into snapshot history.`, 'ok');
+    snapshotUiState.schemaStatus = await ensureStorageSchemaReady(false);
+    const stored = await browser.storage.local.get(SnapshotHistory.STORAGE_KEY);
+    snapshotUiState.history = SnapshotHistory.sanitizeHistory(stored && stored[SnapshotHistory.STORAGE_KEY]);
+    if (snapshotUiState.schemaStatus && snapshotUiState.schemaStatus.migratedLegacySnapshots) {
+      const count = Number(snapshotUiState.schemaStatus.migratedLegacySnapshots) || 0;
+      snapshotSetMessage(`Migrated ${count} legacy snapshot${count === 1 ? '' : 's'} into versioned snapshot history.`, 'ok');
     }
     snapshotUiState.loaded = true;
   } catch (_error) {
@@ -98,6 +104,7 @@ function compareSnapshotRecord(record) {
 
 async function saveSnapshot(name) {
   if (!state.report) return;
+  snapshotUiState.schemaStatus = await requireWritableStorageSchema();
   const url = snapshotCurrentUrl();
   if (!url) return;
   const snapshot = currentRegressionSnapshot();
@@ -114,6 +121,7 @@ async function saveSnapshot(name) {
 }
 
 async function setSnapshotBaseline(id) {
+  snapshotUiState.schemaStatus = await requireWritableStorageSchema();
   const url = snapshotCurrentUrl();
   snapshotUiState.history = SnapshotHistory.setBaseline(snapshotUiState.history, url, id);
   await persistSnapshotHistory();
@@ -123,6 +131,7 @@ async function setSnapshotBaseline(id) {
 }
 
 async function deleteSnapshotRecord(id) {
+  snapshotUiState.schemaStatus = await requireWritableStorageSchema();
   const url = snapshotCurrentUrl();
   const record = SnapshotHistory.findRecord(snapshotUiState.history, url, id);
   if (!record) return;
@@ -159,13 +168,14 @@ async function importSnapshotHistoryFile(file) {
     return;
   }
   try {
+    snapshotUiState.schemaStatus = await requireWritableStorageSchema();
     const textValue = await file.text();
     const parsed = JSON.parse(textValue);
     snapshotUiState.history = SnapshotHistory.importPayload(parsed, snapshotUiState.history);
     await persistSnapshotHistory();
     snapshotSetMessage('Snapshot history imported and merged by snapshot ID.', 'ok');
-  } catch (_error) {
-    snapshotSetMessage('Snapshot import failed: invalid or unsupported JSON.', 'critical');
+  } catch (error) {
+    snapshotSetMessage(snapshotWriteFailure(error, 'Snapshot import failed: invalid or unsupported JSON.'), 'critical');
   }
   renderCompare();
 }
@@ -181,6 +191,7 @@ function appendSnapshotControls(panel) {
   const saveCard = el('div', 'card');
   saveCard.appendChild(el('div', 'card-header', 'Snapshot history'));
   const controls = el('div', 'toolbar');
+  const writable = storageSchemaIsWritable();
   const nameInput = document.createElement('input');
   nameInput.type = 'text';
   nameInput.maxLength = SnapshotHistory.MAX_NAME_LENGTH;
@@ -190,15 +201,16 @@ function appendSnapshotControls(panel) {
 
   const saveButton = el('button', '', 'Save snapshot');
   saveButton.type = 'button';
+  saveButton.disabled = !writable;
   saveButton.addEventListener('click', async () => {
     saveButton.disabled = true;
     try {
       await saveSnapshot(nameInput.value);
-    } catch (_error) {
-      snapshotSetMessage('Snapshot could not be saved to local storage.', 'critical');
+    } catch (error) {
+      snapshotSetMessage(snapshotWriteFailure(error, 'Snapshot could not be saved to local storage.'), 'critical');
       renderCompare();
     } finally {
-      saveButton.disabled = false;
+      saveButton.disabled = !storageSchemaIsWritable();
     }
   });
   controls.appendChild(saveButton);
@@ -228,6 +240,7 @@ function appendSnapshotControls(panel) {
   controls.appendChild(importInput);
   const importButton = el('button', '', 'Import snapshots');
   importButton.type = 'button';
+  importButton.disabled = !writable;
   importButton.addEventListener('click', () => importInput.click());
   controls.appendChild(importButton);
 
@@ -239,6 +252,7 @@ function appendSnapshotControls(panel) {
 
 function appendSnapshotTable(panel) {
   const page = currentSnapshotPage();
+  const writable = storageSchemaIsWritable();
   const cardNode = el('div', 'card');
   cardNode.appendChild(el('div', 'card-header', `${page.snapshots.length} saved snapshot${page.snapshots.length === 1 ? '' : 's'} for this URL`));
   if (!page.snapshots.length) {
@@ -270,11 +284,12 @@ function appendSnapshotTable(panel) {
 
     const baseline = el('button', '', page.baselineId === record.id ? 'Clear baseline' : 'Set baseline');
     baseline.type = 'button';
+    baseline.disabled = !writable;
     baseline.addEventListener('click', async () => {
       try {
         await setSnapshotBaseline(page.baselineId === record.id ? null : record.id);
-      } catch (_error) {
-        snapshotSetMessage('Baseline change could not be saved to local storage.', 'critical');
+      } catch (error) {
+        snapshotSetMessage(snapshotWriteFailure(error, 'Baseline change could not be saved to local storage.'), 'critical');
         renderCompare();
       }
     });
@@ -282,11 +297,12 @@ function appendSnapshotTable(panel) {
 
     const remove = el('button', '', 'Delete');
     remove.type = 'button';
+    remove.disabled = !writable;
     remove.addEventListener('click', async () => {
       try {
         await deleteSnapshotRecord(record.id);
-      } catch (_error) {
-        snapshotSetMessage('Snapshot deletion could not be saved to local storage.', 'critical');
+      } catch (error) {
+        snapshotSetMessage(snapshotWriteFailure(error, 'Snapshot deletion could not be saved to local storage.'), 'critical');
         renderCompare();
       }
     });
@@ -368,6 +384,8 @@ renderCompare = function renderSnapshotHistoryCompare() {
     return;
   }
 
+  const readOnly = storageSchemaReadOnlyMessage(snapshotUiState.schemaStatus);
+  if (readOnly) panel.appendChild(el('div', 'issue warning', readOnly));
   const message = snapshotMessageNode();
   if (message) panel.appendChild(message);
   appendSnapshotControls(panel);
