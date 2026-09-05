@@ -6,6 +6,9 @@ const linkCheckState = {
   operationId: null,
   report: null,
   error: null,
+  progressChecked: 0,
+  progressRequested: 0,
+  filter: 'all',
 };
 
 function linkOperationId() {
@@ -21,13 +24,18 @@ function syncLinkCheckState(pageUrlValue) {
   linkCheckState.operationId = null;
   linkCheckState.report = null;
   linkCheckState.error = null;
+  linkCheckState.progressChecked = 0;
+  linkCheckState.progressRequested = 0;
+  linkCheckState.filter = 'all';
 }
 
-async function runBoundedLinkCheck(links) {
+async function runBoundedLinkCheck(links, force) {
   if (linkCheckState.checking) return;
   linkCheckState.checking = true;
   linkCheckState.error = null;
   linkCheckState.report = null;
+  linkCheckState.progressChecked = 0;
+  linkCheckState.progressRequested = 0;
   linkCheckState.operationId = linkOperationId();
   renderLinks();
 
@@ -37,8 +45,11 @@ async function runBoundedLinkCheck(links) {
       type: 'seoInspector.checkLinksBounded',
       operationId: linkCheckState.operationId,
       urls,
+      force: Boolean(force),
     });
     linkCheckState.report = response;
+    linkCheckState.progressChecked = response.checked || 0;
+    linkCheckState.progressRequested = response.requested || 0;
     state.linkResults = new Map(
       (response.results || []).map((item) => [SeoCore.normalizedUrl(item.url), item]),
     );
@@ -67,9 +78,65 @@ function linkStatusText(result) {
 
 function linkTypeText(link, result) {
   if (link.kind !== 'http') return link.kind;
-  const base = link.internal ? 'Internal' : 'External';
-  if (result && result.redirected) return `${base} · REDIRECT`;
-  return base;
+  const parts = [link.internal ? 'Internal' : 'External'];
+  if (result && result.redirected) parts.push('REDIRECT');
+  if (link.nofollow) parts.push('nofollow');
+  if (link.sponsored) parts.push('sponsored');
+  if (link.ugc) parts.push('ugc');
+  return parts.join(' · ');
+}
+
+function appendLinkIntelligence(panel, links) {
+  const audit = LinkAudit.analyze(links);
+  const summary = el('div', 'card');
+  summary.appendChild(el('div', 'card-header', 'Anchor intelligence'));
+  const badges = el('div', 'toolbar');
+  badges.appendChild(badge(`${audit.generic.length} generic anchors`, audit.generic.length ? 'warning' : 'ok'));
+  badges.appendChild(badge(`${audit.empty.length} empty anchors`, audit.empty.length ? 'warning' : 'ok'));
+  badges.appendChild(badge(`${audit.sameAnchorDifferentUrls.length} same-text conflicts`, audit.sameAnchorDifferentUrls.length ? 'warning' : 'ok'));
+  badges.appendChild(badge(`${audit.differentAnchorsSameUrl.length} multi-text targets`, audit.differentAnchorsSameUrl.length ? 'warning' : 'ok'));
+  summary.appendChild(badges);
+
+  audit.sameAnchorDifferentUrls.slice(0, 5).forEach((group) => {
+    addRow(summary, `“${group.label}”`, `${group.urls.length} different URLs`);
+  });
+  audit.differentAnchorsSameUrl.slice(0, 5).forEach((group) => {
+    addRow(summary, group.url, `${group.labels.length} anchor texts`, 'code');
+  });
+  if (audit.sameAnchorDifferentUrls.length > 5 || audit.differentAnchorsSameUrl.length > 5) {
+    summary.appendChild(el('div', 'muted', 'Showing the first 5 groups from each anchor-consistency category.'));
+  }
+  panel.appendChild(summary);
+}
+
+function appendLinkFilter(toolbar, links) {
+  const select = document.createElement('select');
+  select.setAttribute('aria-label', 'Filter links');
+  const options = [
+    ['all', 'All links'],
+    ['broken', 'Broken'],
+    ['redirecting', 'Redirecting'],
+    ['external', 'External'],
+    ['nofollow', 'Nofollow'],
+    ['sponsored', 'Sponsored'],
+    ['ugc', 'UGC'],
+    ['generic', 'Generic anchor'],
+  ];
+  options.forEach(([value, label]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    option.selected = linkCheckState.filter === value;
+    select.appendChild(option);
+  });
+  select.addEventListener('change', () => {
+    linkCheckState.filter = select.value;
+    renderLinks();
+  });
+  toolbar.appendChild(select);
+
+  const filtered = LinkAudit.filterLinks(links, state.linkResults, linkCheckState.filter);
+  toolbar.appendChild(badge(`${filtered.length}/${links.length} shown`, 'ok'));
 }
 
 renderLinks = function renderLinksBounded() {
@@ -83,7 +150,7 @@ renderLinks = function renderLinksBounded() {
   const checkButton = el('button', '', linkCheckState.checking ? 'Checking…' : linkCheckState.report ? 'Check again' : 'Check HTTP status');
   checkButton.type = 'button';
   checkButton.disabled = linkCheckState.checking;
-  checkButton.addEventListener('click', () => runBoundedLinkCheck(links));
+  checkButton.addEventListener('click', () => runBoundedLinkCheck(links, Boolean(linkCheckState.report)));
   toolbar.appendChild(checkButton);
 
   if (linkCheckState.checking) {
@@ -92,6 +159,8 @@ renderLinks = function renderLinksBounded() {
     cancelButton.addEventListener('click', () => cancelBoundedLinkCheck());
     toolbar.appendChild(cancelButton);
   }
+
+  appendLinkFilter(toolbar, links);
 
   if (state.linkResults.size) {
     const summary = LinkNetwork.summarize(links, Array.from(state.linkResults.values()));
@@ -104,6 +173,7 @@ renderLinks = function renderLinksBounded() {
   if (linkCheckState.report) {
     const response = linkCheckState.report;
     toolbar.appendChild(badge(`${response.checked || 0}/${response.requested || 0} checked`, 'ok'));
+    if (response.cached) toolbar.appendChild(badge(`${response.cached} cached`, 'ok'));
     if (response.capped) toolbar.appendChild(badge('250 URL limit reached', 'warning'));
     if (response.timedOut) toolbar.appendChild(badge('Scan timed out', 'warning'));
     if (response.cancelled) toolbar.appendChild(badge('Cancelled', 'warning'));
@@ -111,7 +181,12 @@ renderLinks = function renderLinksBounded() {
   panel.appendChild(toolbar);
 
   if (linkCheckState.checking) {
-    panel.appendChild(el('div', 'muted', 'Bounded link check running · max 250 unique URLs · 6 concurrent · 10 s/request · 30 s total.'));
+    const progressMax = Math.max(1, linkCheckState.progressRequested || 1);
+    const progress = document.createElement('progress');
+    progress.max = progressMax;
+    progress.value = Math.min(progressMax, linkCheckState.progressChecked || 0);
+    panel.appendChild(progress);
+    panel.appendChild(el('div', 'muted', `${linkCheckState.progressChecked}/${linkCheckState.progressRequested || '…'} checked · max 250 unique URLs · 6 concurrent · 10 s/request · 30 s total.`));
   }
   if (linkCheckState.error) {
     const errorNode = el('div', 'issue critical');
@@ -119,6 +194,13 @@ renderLinks = function renderLinksBounded() {
     panel.appendChild(errorNode);
   }
 
+  appendLinkIntelligence(panel, links);
+
+  if ((linkCheckState.filter === 'broken' || linkCheckState.filter === 'redirecting') && !state.linkResults.size) {
+    panel.appendChild(el('div', 'empty', 'Run the HTTP status check first to use this network-status filter.'));
+  }
+
+  const filteredLinks = LinkAudit.filterLinks(links, state.linkResults, linkCheckState.filter);
   const wrap = el('div', 'table-wrap');
   const table = document.createElement('table');
   const head = document.createElement('thead');
@@ -128,7 +210,7 @@ renderLinks = function renderLinksBounded() {
   table.appendChild(head);
   const body = document.createElement('tbody');
 
-  links.slice(0, 500).forEach((link) => {
+  filteredLinks.slice(0, 500).forEach((link) => {
     const row = document.createElement('tr');
     const status = statusForLink(link);
     row.appendChild(el('td', '', linkStatusText(status)));
@@ -141,8 +223,21 @@ renderLinks = function renderLinksBounded() {
   table.appendChild(body);
   wrap.appendChild(table);
   panel.appendChild(wrap);
-  if (links.length > 500) panel.appendChild(el('div', 'muted', `Showing first 500 of ${links.length} links.`));
+  if (!filteredLinks.length) panel.appendChild(el('div', 'empty', 'No links match this filter.'));
+  if (filteredLinks.length > 500) panel.appendChild(el('div', 'muted', `Showing first 500 of ${filteredLinks.length} matching links.`));
 };
+
+browser.runtime.onMessage.addListener((message) => {
+  if (!message || message.type !== 'seoInspector.linkCheckProgress') return undefined;
+  if (!linkCheckState.checking || message.operationId !== linkCheckState.operationId) return undefined;
+  linkCheckState.progressChecked = Number(message.checked) || 0;
+  linkCheckState.progressRequested = Number(message.requested) || 0;
+  if (message.result && message.result.url) {
+    state.linkResults.set(SeoCore.normalizedUrl(message.result.url), message.result);
+  }
+  if (linkCheckState.progressChecked === linkCheckState.progressRequested || linkCheckState.progressChecked % 5 === 0) renderLinks();
+  return undefined;
+});
 
 window.addEventListener('unload', () => {
   if (!linkCheckState.operationId) return;
