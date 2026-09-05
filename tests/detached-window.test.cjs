@@ -32,6 +32,7 @@ function harness() {
   const messages = [];
   const createdWindows = [];
   const updatedWindows = [];
+  const removedWindows = [];
   const storage = {};
   const tabs = new Map([
     [10, { id: 10, url: 'https://example.test/a', active: true, windowId: 1 }],
@@ -86,6 +87,10 @@ function harness() {
         updatedWindows.push({ windowId, options });
         return Object.assign(windows.get(windowId), options);
       },
+      async remove(windowId) {
+        removedWindows.push(windowId);
+        windows.delete(windowId);
+      },
     },
   };
 
@@ -108,6 +113,7 @@ function harness() {
     messages,
     createdWindows,
     updatedWindows,
+    removedWindows,
     runtimeOnMessage,
     tabOnActivated,
     tabOnUpdated,
@@ -156,12 +162,31 @@ test('detached inspector creates one resizable popup window and focuses it on la
   assert.equal(second.windowId, 99);
   assert.equal(second.targetTabId, 11);
   assert.equal(h.createdWindows.length, 1);
+  assert.deepEqual(h.removedWindows, []);
   const update = h.updatedWindows.at(-1);
   assert.equal(update.windowId, 99);
   assert.equal(update.options.focused, true);
 
   const target = await h.dispatch({ type: 'seoInspector.getTargetTab' });
   assert.equal(target.id, 11);
+});
+
+test('detached inspector discards a persisted stale blank popup after extension reload', async () => {
+  const h = harness();
+  h.tabs.set(91, { id: 91, url: 'about:blank', active: true, windowId: 98 });
+  h.windows.set(98, { id: 98, type: 'popup', focused: false, tabs: [h.tabs.get(91)] });
+  h.storage['inspector-window:v1'] = { windowId: 98, targetTabId: 10 };
+
+  const opened = await h.dispatch({ type: 'seoInspector.openWindow', tabId: 10 });
+
+  assert.equal(opened.ok, true);
+  assert.equal(opened.created, true);
+  assert.equal(opened.windowId, 99);
+  assert.deepEqual(h.removedWindows, [98]);
+  assert.equal(h.windows.has(98), false);
+  assert.equal(h.createdWindows.length, 1);
+  assert.equal(h.createdWindows[0].url, 'moz-extension://test/sidebar/sidebar.html');
+  assert.equal(h.storage['inspector-window:v1'].windowId, 99);
 });
 
 test('detached inspector follows activated normal tabs but ignores its own popup tab', async () => {

@@ -11,6 +11,10 @@
     return Number.isInteger(value) && value >= 0 ? value : null;
   }
 
+  function inspectorPageUrl() {
+    return browser.runtime.getURL(INSPECTOR_PAGE);
+  }
+
   async function ensureState() {
     if (state.loaded) return state;
     const stored = await browser.storage.session.get(STATE_KEY).catch(() => ({}));
@@ -70,15 +74,36 @@
     return tab;
   }
 
+  function hasLiveInspectorPage(windowInfo) {
+    if (!windowInfo || !Array.isArray(windowInfo.tabs)) return false;
+    const expected = inspectorPageUrl();
+    return windowInfo.tabs.some((tab) => tab && tab.url === expected);
+  }
+
+  async function discardStaleInspectorWindow(windowInfo) {
+    const staleId = windowInfo ? numericId(windowInfo.id) : numericId(state.windowId);
+    state.windowId = null;
+    await persistState();
+    if (staleId !== null) {
+      await browser.windows.remove(staleId).catch(() => {});
+    }
+  }
+
   async function existingInspectorWindow() {
     await ensureState();
     const id = numericId(state.windowId);
     if (id === null) return null;
-    const windowInfo = await browser.windows.get(id).catch(() => null);
-    if (windowInfo) return windowInfo;
-    state.windowId = null;
-    await persistState();
-    return null;
+    const windowInfo = await browser.windows.get(id, { populate: true }).catch(() => null);
+    if (!windowInfo) {
+      state.windowId = null;
+      await persistState();
+      return null;
+    }
+    if (!hasLiveInspectorPage(windowInfo)) {
+      await discardStaleInspectorWindow(windowInfo);
+      return null;
+    }
+    return windowInfo;
   }
 
   async function openInspectorWindow(tabId) {
@@ -91,7 +116,7 @@
     }
 
     const created = await browser.windows.create({
-      url: browser.runtime.getURL(INSPECTOR_PAGE),
+      url: inspectorPageUrl(),
       type: 'popup',
       focused: true,
       width: DEFAULT_WIDTH,
