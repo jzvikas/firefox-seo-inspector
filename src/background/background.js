@@ -4,6 +4,7 @@ const RESPONSE_KEY_PREFIX = 'response-meta:';
 const LINK_CHECK_LIMIT = 250;
 const LINK_CHECK_CONCURRENCY = 6;
 const LINK_CHECK_TIMEOUT_MS = 10000;
+const LINK_CHECK_SCAN_TIMEOUT_MS = 30000;
 const ROBOTS_MAX_BYTES = 1024 * 1024;
 const ROBOTS_TIMEOUT_MS = 10000;
 const ROBOTS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -144,8 +145,8 @@ function linkedAbortController(timeoutMs, externalSignal) {
   };
 }
 
-async function checkOneLink(url) {
-  const linked = linkedAbortController(LINK_CHECK_TIMEOUT_MS, null);
+async function checkOneLink(url, externalSignal) {
+  const linked = linkedAbortController(LINK_CHECK_TIMEOUT_MS, externalSignal || null);
   try {
     const response = await fetch(url, {
       method: 'HEAD',
@@ -164,20 +165,28 @@ async function checkOneLink(url) {
       error: null,
     };
   } catch (error) {
+    let reason = 'network';
+    if (error && error.name === 'AbortError') {
+      reason = externalSignal && externalSignal.aborted
+        ? 'cancelled'
+        : linked.timedOut()
+          ? 'timeout'
+          : 'cancelled';
+    }
     return {
       url,
       status: 0,
       statusText: '',
       redirected: false,
       finalUrl: url,
-      error: error && error.name === 'AbortError' ? 'timeout' : 'network',
+      error: reason,
     };
   } finally {
     linked.cleanup();
   }
 }
 
-async function checkLinks(values) {
+async function checkLinks(values, operationIdValue) {
   const unique = [];
   const seen = new Set();
   let capped = false;
@@ -189,24 +198,56 @@ async function checkLinks(values) {
     else capped = true;
   }
 
+  const operationId = String(operationIdValue || `legacy-links-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const previous = networkOperations.get(operationId);
+  if (previous) previous.abort();
+  const operationController = new AbortController();
+  networkOperations.set(operationId, operationController);
+  let scanTimedOut = false;
+  const operationTimer = setTimeout(() => {
+    scanTimedOut = true;
+    operationController.abort();
+  }, LINK_CHECK_SCAN_TIMEOUT_MS);
+
   const results = new Array(unique.length);
   let cursor = 0;
   async function worker() {
-    while (cursor < unique.length) {
+    while (cursor < unique.length && !operationController.signal.aborted) {
       const index = cursor;
       cursor += 1;
-      results[index] = await checkOneLink(unique[index]);
+      results[index] = await checkOneLink(unique[index], operationController.signal);
     }
   }
-  const workerCount = Math.min(LINK_CHECK_CONCURRENCY, unique.length);
-  await Promise.all(Array.from({ length: workerCount }, () => worker()));
-  return { results, checked: unique.length, capped };
+
+  try {
+    const workerCount = Math.min(LINK_CHECK_CONCURRENCY, unique.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+    const finalResults = results.filter(Boolean);
+    return {
+      operationId,
+      results: finalResults,
+      checked: finalResults.length,
+      requested: unique.length,
+      capped,
+      cancelled: operationController.signal.aborted && !scanTimedOut,
+      timedOut: scanTimedOut,
+      limits: {
+        maxTargets: LINK_CHECK_LIMIT,
+        concurrency: LINK_CHECK_CONCURRENCY,
+        requestTimeoutMs: LINK_CHECK_TIMEOUT_MS,
+        scanTimeoutMs: LINK_CHECK_SCAN_TIMEOUT_MS,
+      },
+    };
+  } finally {
+    clearTimeout(operationTimer);
+    if (networkOperations.get(operationId) === operationController) networkOperations.delete(operationId);
+  }
 }
 
 async function checkTarget(value) {
   const url = sanitizeHttpUrl(value);
   if (!url) return { url: value || '', status: 0, statusText: '', redirected: false, finalUrl: value || '', error: 'invalid-url' };
-  return checkOneLink(url);
+  return checkOneLink(url, null);
 }
 
 function byteLength(value) {
@@ -379,9 +420,15 @@ async function checkSitemaps(message) {
   const targetUrl = sanitizeHttpUrl(message.canonicalUrl || message.pageUrl);
   if (!pageUrl || !targetUrl) return { error: 'invalid-url', found: false, documents: [], sitemaps: [] };
 
-  const operationId = String(message.operationId || `sitemap-${Date.now()}`);
+  const operationId = String(message.operationId || `sitemap-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const previous = networkOperations.get(operationId);
+  if (previous) previous.abort();
   const operationController = new AbortController();
-  const operationTimer = setTimeout(() => operationController.abort(), SITEMAP_SCAN_TIMEOUT_MS);
+  let scanTimedOut = false;
+  const operationTimer = setTimeout(() => {
+    scanTimedOut = true;
+    operationController.abort();
+  }, SITEMAP_SCAN_TIMEOUT_MS);
   networkOperations.set(operationId, operationController);
 
   const seeds = sitemapSeedUrls(pageUrl, message.sitemapUrls);
@@ -391,7 +438,6 @@ async function checkSitemaps(message) {
   let found = null;
   let totalBytes = 0;
   let capped = false;
-  let operationTimedOut = false;
 
   try {
     while (queue.length && documents.length < SITEMAP_MAX_DOCUMENTS && !found && !operationController.signal.aborted) {
@@ -445,10 +491,9 @@ async function checkSitemaps(message) {
     }
 
     if (queue.length && documents.length >= SITEMAP_MAX_DOCUMENTS) capped = true;
-    operationTimedOut = operationController.signal.aborted;
     return {
       operationId,
-      error: operationTimedOut ? 'cancelled-or-timeout' : null,
+      error: operationController.signal.aborted ? (scanTimedOut ? 'timeout' : 'cancelled') : null,
       pageUrl,
       targetUrl,
       sitemaps: seeds,
@@ -459,16 +504,19 @@ async function checkSitemaps(message) {
       discoveredDocuments: queued.size,
       totalBytes,
       capped,
+      cancelled: operationController.signal.aborted && !scanTimedOut,
+      timedOut: scanTimedOut,
       limits: {
         maxDocuments: SITEMAP_MAX_DOCUMENTS,
         maxDocumentBytes: SITEMAP_MAX_DOC_BYTES,
         maxTotalBytes: SITEMAP_MAX_TOTAL_BYTES,
-        timeoutMs: SITEMAP_SCAN_TIMEOUT_MS,
+        requestTimeoutMs: SITEMAP_REQUEST_TIMEOUT_MS,
+        scanTimeoutMs: SITEMAP_SCAN_TIMEOUT_MS,
       },
     };
   } finally {
     clearTimeout(operationTimer);
-    networkOperations.delete(operationId);
+    if (networkOperations.get(operationId) === operationController) networkOperations.delete(operationId);
   }
 }
 
@@ -482,7 +530,7 @@ function cancelNetworkOperation(operationId) {
 browser.runtime.onMessage.addListener((message, sender) => {
   if (!message || typeof message !== 'object') return undefined;
   if (message.type === 'seoInspector.getResponseMeta') return responseMetaForSender(sender);
-  if (message.type === 'seoInspector.checkLinks') return checkLinks(message.urls);
+  if (message.type === 'seoInspector.checkLinks') return checkLinks(message.urls, message.operationId);
   if (message.type === 'seoInspector.checkTarget') return checkTarget(message.url);
   if (message.type === 'seoInspector.getRobots') return robotsForPage(message.url, message.userAgent);
   if (message.type === 'seoInspector.checkSitemaps') return checkSitemaps(message);
