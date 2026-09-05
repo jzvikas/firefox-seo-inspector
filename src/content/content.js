@@ -14,7 +14,8 @@ async function analyzeDocument(doc, locationLike, responseMeta) {
   const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
   const evaluation = SeoCore.evaluateFacts(facts, responseMeta || null);
   evaluation.indexability = Indexability.analyze(facts, responseMeta || null);
-  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: pageContext() };
+  const performance = PerformanceAudit.collect(doc, window.performance, locationLike && locationLike.href ? locationLike.href : '');
+  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: pageContext(), performance };
 }
 
 async function analyzeCurrentPage() {

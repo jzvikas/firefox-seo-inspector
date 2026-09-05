@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Dedicated Performance panel with DOM element count/depth, observed request count, known transferred/encoded bytes, third-party request/byte summary, and resource-type breakdown.
+- Navigation Timing diagnostics for TTFB, DNS, connection, TLS, response download, DOMContentLoaded, load event, protocol, redirect count, and HTML transfer size.
+- Largest-resource and slowest-resource rankings plus a bounded Resource Timing table for up to 1,000 subresource entries.
+- Performance resource classification for HTML, JavaScript, CSS, images, fonts, Fetch/XHR, media, and other resources, with first-party/third-party attribution.
+- Automated tests for resource classification, byte accounting, third-party detection, navigation timing, DOM depth/counting, ranking, unknown-size handling, and safety caps.
+
 ## [0.2.0] - 2026-09-05
 
 ### Added

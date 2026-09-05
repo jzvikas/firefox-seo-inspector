@@ -91,13 +91,13 @@ Goal: explain what makes a page heavy, fragile, or technically weak.
 
 ### Performance overview
 
-- [ ] DOM node count and DOM depth indicators.
-- [ ] Request count and transferred bytes.
-- [ ] Breakdown by HTML, JS, CSS, images, fonts, and third-party resources.
-- [ ] Largest resources.
-- [ ] Slowest resources.
-- [ ] TTFB and document response timing.
-- [ ] Resource timing table.
+- [x] DOM node count and DOM depth indicators.
+- [x] Request count and transferred bytes.
+- [x] Breakdown by HTML, JS, CSS, images, fonts, and third-party resources.
+- [x] Largest resources.
+- [x] Slowest resources.
+- [x] TTFB and document response timing.
+- [x] Resource timing table.
 
 ### Web performance hints
 

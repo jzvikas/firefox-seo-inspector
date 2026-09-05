@@ -52,6 +52,7 @@
       "js": [
         "lib/seo-core.js",
         "lib/indexability.js",
+        "lib/performance-audit.js",
         "lib/page-extractor.js",
         "content/content.js"
       ],
