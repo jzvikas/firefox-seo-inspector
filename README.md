@@ -190,9 +190,18 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Tabs without an injected content script are reported as unavailable instead of being silently refetched; reloading the tab makes it eligible for a later scan.
 - Multi-tab results stay in sidebar memory unless the user explicitly exports them.
 
+### Crawler Lite
+
+- Dedicated **Crawler** panel starts from the current page by default or a user-entered HTTP/HTTPS seed URL.
+- Same-host crawling is enabled by default; configurable hard limits allow at most 250 URLs and depth 3, with URL normalization/deduplication and six concurrent requests.
+- Live progress plus Pause/Resume/Cancel; Cancel aborts in-flight requests for that crawl while preserving partial results.
+- Each crawler GET omits credentials and referrer, follows redirects, has a 12-second timeout, and accepts at most 2 MiB of HTML per URL. Fetched scripts are never executed.
+- Collects status, title, description, H1, canonical, robots, indexability, score, and issue counts, then detects redirects/errors and duplicate title/description/H1 values.
+- Search/filter/sort and CSV/JSON export are local to the sidebar. See [CRAWLER_LITE.md](CRAWLER_LITE.md).
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. Richer global/URL/selector ignore-rule management remains open; the next Top-15 multi-page milestone is **Crawler Lite**.
+See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. Richer global/URL/selector ignore-rule management remains open; the next Top-15 multi-page milestone is **Page-type detection**.
 
 ## Install for development
 
@@ -210,7 +219,7 @@ A prebuilt unsigned package is also kept in `dist/`. Stable Firefox generally re
 
 The extension requests access to HTTP and HTTPS pages because its job is to inspect the active page and, only when required by a feature, check related URLs. The `webRequest` permission is used read-only to capture SEO-relevant response metadata, redirect hops, and selected main-document security response headers.
 
-External link, image, canonical, hreflang, sitemap, and explicit URL-to-URL comparison checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. The link checker also maintains a bounded in-memory session cache for successful results; explicit re-checks bypass it. `robots.txt` discovery is a single size/time-bounded request and is cached briefly. URL A/B comparison is not a crawler: it fetches only the two user-entered HTTP/HTTPS documents, with a 2 MiB limit and 12-second timeout per document.
+External link, image, canonical, hreflang, sitemap, crawler-lite, and explicit URL-to-URL comparison checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total/per-request timeouts. The link checker also maintains a bounded in-memory session cache for successful results; explicit re-checks bypass it. `robots.txt` discovery is a single size/time-bounded request and is cached briefly. URL A/B comparison fetches only the two user-entered HTTP/HTTPS documents, with a 2 MiB limit and 12-second timeout per document. Crawler Lite is a separate explicit bounded crawl with a 250-URL/depth-3 hard cap and the limits documented above.
 
 The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints, asset inspection, and third-party grouping. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. Third-party service categories are local heuristics rather than network lookups. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
 
@@ -221,6 +230,8 @@ The Security panel reads current-page DOM/resource references plus selected secu
 Snapshot history, regression summaries, custom audit rules, and domain profiles are stored only in `browser.storage.local`. Snapshot history is capped at 50 records per exact normalized URL. Regression snapshots store bounded summaries rather than full performance/resource inventories, and on-demand network status counts are included only when those checks actually ran. Custom rules contain policy values only. Domain profiles contain the hostname plus local policy/expectation values and are capped at 200 records. None of this data is uploaded by the extension.
 
 The **Tabs** multi-tab audit reuses the existing content scripts in already-open HTTP/HTTPS tabs. It does not make a fallback page request when a tab cannot be analyzed. Results are held only in sidebar memory until explicitly exported to CSV or JSON.
+
+Crawler Lite fetches only URLs selected by its bounded queue, stores results in sidebar memory, and does not upload the crawl dataset. Same-host is the safe default; disabling it is an explicit user action and does not remove the URL/depth/request/byte caps.
 
 **Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. **URL A vs URL B** is a separate credential-free comparison and never uses page credentials. See [PRIVACY.md](PRIVACY.md).
 
