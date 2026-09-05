@@ -148,8 +148,9 @@ test('category sidebar is quiet on unrelated pages', () => {
   assert.match(text, /Article \/ blog/);
 });
 
-test('content report integration stores category audit for rendered and raw reports', () => {
+test('content report integration preserves response metadata in rendered and raw category audits', () => {
   const content = source('src/content/content.js');
-  assert.match(content, /const categoryAudit = CategoryPageAudit\.inspect\(facts, pageType\);/);
+  assert.match(content, /const categoryAudit = CategoryPageAudit\.inspect\(facts, pageType, responseMeta \|\| null\);/);
+  assert.match(content, /const categoryAudit = CategoryPageAudit\.inspect\(facts, pageType, responseMeta\);/);
   assert.ok((content.match(/\bcategoryAudit,\n/g) || []).length >= 2);
 });
