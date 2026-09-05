@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Dedicated **Crawler** panel for explicit bounded local crawling from the current page or a user-entered HTTP/HTTPS seed URL.
+- Same-host restriction by default, configurable crawl caps up to 250 URLs and depth 3, URL normalization/deduplication, six concurrent requests, live progress, Pause/Resume, and scan-level cancellation that aborts in-flight requests.
+- Credential-free/no-referrer crawler GET requests with redirect following, a 12-second per-request timeout, 2 MiB HTML response limit, non-HTML rejection, and local parsing without executing fetched scripts.
+- Crawler collection of HTTP status, title, description, H1, canonical, robots, indexability, score, and issue counts plus broken/error/redirect discovery and duplicate title/description/H1 detection.
+- Crawler search/filter/sort plus local CSV/JSON export, bounded in-memory result state, dedicated public documentation, model tests, sidebar runtime/dependency tests, and background network-safety/cancellation tests.
 - Dedicated **Tabs** panel for on-demand audits of already-open HTTP/HTTPS tabs without crawling or refetching those pages.
 - Bounded multi-tab scanning for up to 100 tabs with six concurrent content-script audits, live progress, cancellation, a 15-second per-tab safety timeout, and explicit unavailable-tab reporting instead of network fallback.
 - Cross-tab collection of URL, HTTP status, title, description, H1, canonical, robots, indexability, SEO score, and issue counts, plus normalized duplicate title/description/H1 detection.
@@ -120,8 +125,8 @@ All notable changes to this project are documented here.
 - Heading tree and in-page element highlighting.
 - Link inventory with internal/external classification, rel flags, missing-label detection, and on-demand credential-free `HEAD` status checks.
 - Image inspection for alt attributes, explicit dimensions, intrinsic/rendered dimensions, loading mode, and image source.
-- JSON-LD parsing, schema type discovery, invalid structured-data detection, and basic Product checks.
-- Hreflang, Open Graph, and Twitter/X card inspection.
+- JSON-LD parsing, schema type discovery, invalid structured-data detection, and basic Product schema checks.
+- Hreflang, Open Graph, and Twitter/X card metadata inspection.
 - Rendered DOM versus raw HTML comparison.
 - Per-URL local snapshots and regression diffs.
 - JSON report export and copyable issue list.
