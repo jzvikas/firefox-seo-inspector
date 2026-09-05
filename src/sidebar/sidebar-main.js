@@ -8,6 +8,7 @@ function renderAll() {
   renderPerformanceHints();
   renderAssetAudit();
   renderThirdPartyAudit();
+  renderContent();
   renderSerp();
   renderHreflang();
   renderIssues();
