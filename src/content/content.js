@@ -7,6 +7,7 @@ const highlightNodes = new Set();
 async function analyzeDocument(doc, locationLike, responseMeta) {
   const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
   const evaluation = SeoCore.evaluateFacts(facts, responseMeta || null);
+  evaluation.indexability = Indexability.analyze(facts, responseMeta || null);
   return { facts, evaluation, responseMeta: responseMeta || null };
 }
 
@@ -69,9 +70,11 @@ async function fetchRawReport() {
     contentLanguage: response.headers.get('content-language') ? [response.headers.get('content-language')] : [],
     link: response.headers.get('link') ? [response.headers.get('link')] : [],
     cacheControl: response.headers.get('cache-control') ? [response.headers.get('cache-control')] : [],
+    redirectChain: [],
   };
   const facts = PageExtractor.extract(rawDocument, rawUrl, { performance: null });
   const evaluation = SeoCore.evaluateFacts(facts, responseMeta);
+  evaluation.indexability = Indexability.analyze(facts, responseMeta);
   return { facts, evaluation, responseMeta };
 }
 
