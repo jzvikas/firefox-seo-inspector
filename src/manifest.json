@@ -56,6 +56,7 @@
         "lib/performance-hints.js",
         "lib/asset-audit.js",
         "lib/third-party-audit.js",
+        "lib/content-audit.js",
         "lib/page-extractor.js",
         "content/content.js"
       ],
