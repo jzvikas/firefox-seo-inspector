@@ -7,6 +7,12 @@ All notable changes to this project are documented here.
 ### Added
 
 - Development roadmap from v0.2.0 through v1.0.0 covering indexability diagnostics, performance/security inspection, regression workflows, multi-page auditing, crawler-lite functionality, and platform-neutral e-commerce SEO checks.
+- Dedicated Indexability panel with a single Indexable / Noindex / Blocked / Canonicalized / Redirected / Error verdict and explicit reasons.
+- Redirect-chain capture for the current navigation, including hop status codes, loop detection, excessive-chain warnings, and final URL reporting.
+- On-demand canonical target status checking with credential-free requests and final URL reporting.
+- Canonical diagnostics for cross-domain, protocol, hostname, trailing-slash, and query-string mismatches.
+- Raw HTML versus rendered DOM indexability comparison for robots directives, canonical changes, and verdict changes.
+- Automated tests for indexability precedence, robots conflicts, canonical diagnostics, redirects, loop detection, robots.txt integration input, and raw/rendered differences.
 
 ## [0.1.0] - 2026-09-05
 

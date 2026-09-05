@@ -3,6 +3,7 @@
 function renderAll() {
   renderHeader();
   renderOverview();
+  renderIndexability();
   renderIssues();
   renderHeadings();
   renderLinks();
