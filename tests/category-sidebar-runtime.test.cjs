@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const CategoryPageAudit = require('../src/lib/category-page-audit.js');
+const PaginationAudit = require('../src/lib/pagination-audit.js');
 const PageType = require('../src/lib/page-type.js');
 
 function source(relative) {
@@ -22,6 +23,7 @@ function fakeNode(tag) {
     className: '',
     textContent: '',
     type: '',
+    disabled: false,
   };
 }
 
@@ -45,7 +47,10 @@ function categoryReport() {
       kind: 'http',
       internal: true,
       ref: { selector: 'a[href]', index },
-    })),
+    })).concat([
+      { href: 'https://shop.test/shoes?page=2', label: '2', kind: 'http', internal: true, ref: { selector: 'a[href]', index: 20 } },
+      { href: 'https://shop.test/shoes?page=3', label: '3', kind: 'http', internal: true, ref: { selector: 'a[href]', index: 21 } },
+    ]),
     textWordCount: 240,
     pageSignals: {
       itemListMicrodata: 1,
@@ -56,19 +61,28 @@ function categoryReport() {
     },
   };
   const pageType = { primary: 'category', label: 'Category / listing', confidence: 'high', traits: { faceted: true, pagination: false } };
-  return { facts, pageType, categoryAudit: CategoryPageAudit.inspect(facts, pageType) };
+  return { facts, pageType, responseMeta: { xRobotsTag: ['noindex'] }, categoryAudit: CategoryPageAudit.inspect(facts, pageType) };
 }
 
 function harness(report) {
   const panel = fakeNode('section');
   const sent = [];
+  const runtimeListeners = [];
   const context = vm.createContext({
     CategoryPageAudit,
+    PaginationAudit,
     PageType,
     state: { report },
     document: {
       getElementById(id) { return id === 'category' ? panel : null; },
       createElement(tag) { return fakeNode(tag); },
+    },
+    window: { addEventListener() {} },
+    browser: {
+      runtime: {
+        onMessage: { addListener(listener) { runtimeListeners.push(listener); } },
+        async sendMessage(message) { sent.push(message); return { checked: 0, requested: 0, results: [] }; },
+      },
     },
     clear(node) { node.children.length = 0; },
     el(tag, className, text) {
@@ -91,17 +105,21 @@ function harness(report) {
     sendToTab(message) { sent.push(message); return Promise.resolve({ highlighted: 1 }); },
   });
   vm.runInContext(source('src/sidebar/sidebar-category.js'), context, { filename: 'sidebar-category.js' });
-  return { context, panel, sent };
+  return { context, panel, sent, runtimeListeners };
 }
 
-test('category sidebar renders canonical listing facets pagination and issues', () => {
+test('category sidebar renders canonical listing facets robots pagination network action and issues', () => {
   const h = harness(categoryReport());
   assert.doesNotThrow(() => vm.runInContext('renderCategory()', h.context));
   const text = flattenText(h.panel).join('\n');
   assert.match(text, /Category\/listing audit/);
   assert.match(text, /Canonical/);
   assert.match(text, /Faceted navigation/);
+  assert.match(text, /X-Robots-Tag: noindex/);
+  assert.match(text, /Effective noindex: Yes/);
   assert.match(text, /Pagination/);
+  assert.match(text, /Pagination HTTP check/);
+  assert.match(text, /Check pagination links/);
   assert.match(text, /Current URL parameters/);
   assert.match(text, /Category\/listing issues/);
   assert.match(text, /color/);
@@ -120,6 +138,7 @@ test('category sidebar is quiet on unrelated pages', () => {
       textWordCount: 500,
       pageSignals: { itemListMicrodata: 0, productMicrodata: 0, listingLinkUrls: [], relPrev: '', relNext: '' },
     },
+    responseMeta: { xRobotsTag: [] },
     pageType: { primary: 'article', label: 'Article / blog', confidence: 'high', traits: { faceted: false, pagination: false } },
   };
   const h = harness(report);
