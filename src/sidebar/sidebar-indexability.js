@@ -120,7 +120,7 @@ function renderSitemapCard(panel, analysis) {
   if (state.sitemapChecking) {
     const cancelButton = el('button', '', 'Cancel sitemap scan');
     cancelButton.type = 'button';
-    cancelButton.addEventListener('click', () => cancelSitemapScan());
+    cancelButton.addEventListener('click', () => cancelSitemapScan().catch((error) => handleAsyncUiFailure('sitemap-cancel', error)));
     actions.appendChild(cancelButton);
     sitemapCard.appendChild(actions);
     sitemapCard.appendChild(el('div', 'empty', 'Scanning bounded sitemap set…'));
@@ -130,7 +130,7 @@ function renderSitemapCard(panel, analysis) {
 
   const checkButton = el('button', '', state.sitemapReport ? 'Check sitemap again' : 'Check sitemap');
   checkButton.type = 'button';
-  checkButton.addEventListener('click', () => runSitemapScan(analysis));
+  checkButton.addEventListener('click', () => runSitemapScan(analysis).catch((error) => handleAsyncUiFailure('sitemap-scan', error)));
   actions.appendChild(checkButton);
   sitemapCard.appendChild(actions);
 
@@ -184,21 +184,23 @@ function renderIndexability() {
   const rawActions = el('div', 'toolbar');
   const rawButton = el('button', '', 'Compare raw HTML');
   rawButton.type = 'button';
-  rawButton.addEventListener('click', async () => {
-    rawButton.disabled = true;
-    rawButton.textContent = 'Fetching…';
-    try {
-      const rawReport = await sendToTab({ type: 'seoInspector.fetchRaw' });
-      const rawAnalysis = Indexability.analyze(
-        rawReport.facts,
-        rawReport.responseMeta || null,
-        { robotsTxt: state.robotsReport },
-      );
-      state.indexabilityRawDiff = Indexability.diff(analysis, rawAnalysis);
-    } catch (_error) {
-      state.indexabilityRawDiff = null;
-    }
-    renderIndexability();
+  rawButton.addEventListener('click', () => {
+    (async () => {
+      rawButton.disabled = true;
+      rawButton.textContent = 'Fetching…';
+      try {
+        const rawReport = await sendToTab({ type: 'seoInspector.fetchRaw' });
+        const rawAnalysis = Indexability.analyze(
+          rawReport.facts,
+          rawReport.responseMeta || null,
+          { robotsTxt: state.robotsReport },
+        );
+        state.indexabilityRawDiff = Indexability.diff(analysis, rawAnalysis);
+      } catch (_error) {
+        state.indexabilityRawDiff = null;
+      }
+      renderIndexability();
+    })().catch((error) => handleAsyncUiFailure('indexability-raw-compare', error));
   });
   rawActions.appendChild(rawButton);
   verdictCard.appendChild(rawActions);
@@ -239,17 +241,19 @@ function renderIndexability() {
     const actionsCanonical = el('div', 'toolbar');
     const button = el('button', '', 'Check canonical target');
     button.type = 'button';
-    button.addEventListener('click', async () => {
-      button.disabled = true;
-      button.textContent = 'Checking…';
-      try {
-        const result = await browser.runtime.sendMessage({ type: 'seoInspector.checkTarget', url: canonical.url });
-        setCanonicalCheck(canonical.url, result);
-        renderIndexability();
-      } finally {
-        button.disabled = false;
-        button.textContent = 'Check canonical target';
-      }
+    button.addEventListener('click', () => {
+      (async () => {
+        button.disabled = true;
+        button.textContent = 'Checking…';
+        try {
+          const result = await browser.runtime.sendMessage({ type: 'seoInspector.checkTarget', url: canonical.url });
+          setCanonicalCheck(canonical.url, result);
+          renderIndexability();
+        } finally {
+          button.disabled = false;
+          button.textContent = 'Check canonical target';
+        }
+      })().catch((error) => handleAsyncUiFailure('canonical-target-check', error));
     });
     actionsCanonical.appendChild(button);
     canonicalCard.appendChild(actionsCanonical);
