@@ -95,7 +95,7 @@
   function sanitizeHistory(value) {
     const output = emptyHistory();
     if (!value || typeof value !== 'object') return output;
-    const pages = value.pages && typeof value.pages === 'object' ? value.pages : {};
+    const pages = value.pages && typeof value.pages === 'object' && !Array.isArray(value.pages) ? value.pages : {};
     Object.keys(pages).slice(0, MAX_IMPORT_PAGES).forEach((rawUrl) => {
       const url = normalizeUrl(rawUrl);
       if (!url) return;
@@ -205,10 +205,12 @@
   }
 
   function importPayload(value, current) {
-    const payload = value && typeof value === 'object' ? value : null;
+    const payload = value && typeof value === 'object' && !Array.isArray(value) ? value : null;
     if (!payload) throw new Error('invalid-import');
     const incoming = payload.format === 'firefox-seo-inspector-snapshots' ? payload.history : payload;
-    if (!incoming || typeof incoming !== 'object') throw new Error('invalid-import');
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming) || !incoming.pages || typeof incoming.pages !== 'object' || Array.isArray(incoming.pages)) {
+      throw new Error('invalid-import');
+    }
     return mergeHistories(current, incoming);
   }
 
