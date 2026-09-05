@@ -19,6 +19,7 @@
 
   async function loadAuditPolicy(url) {
     try {
+      await browser.runtime.sendMessage({ type: 'seoInspector.ensureStorageSchema' }).catch(() => null);
       const stored = await browser.storage.local.get([CustomRules.STORAGE_KEY, DomainProfiles.STORAGE_KEY]);
       const baseRules = CustomRules.normalize(stored && stored[CustomRules.STORAGE_KEY]);
       const profiles = DomainProfiles.normalizeStore(stored && stored[DomainProfiles.STORAGE_KEY]);
