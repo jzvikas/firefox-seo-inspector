@@ -2,12 +2,15 @@
   'use strict';
 
   const BOOTSTRAP_KEY = '__seoInspectorContentBootstrappedV1';
+  const RAW_SOURCE_MAX_BYTES = 2 * 1024 * 1024;
+  const RAW_SOURCE_TIMEOUT_MS = 12000;
   if (globalThis[BOOTSTRAP_KEY]) return;
   globalThis[BOOTSTRAP_KEY] = true;
 
   let observer = null;
   let mutationTimer = null;
   const highlightNodes = new Set();
+  const rawSourceOperations = new Map();
 
   function pageContext() {
     return {
@@ -137,51 +140,141 @@
     return highlightNodes.size;
   }
 
-  async function fetchRawReport() {
-    const response = await fetch(window.location.href, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-      redirect: 'follow',
-    });
-    const html = await response.text();
-    const parser = new DOMParser();
-    const rawDocument = parser.parseFromString(html, 'text/html');
-    const rawUrl = new URL(response.url || window.location.href);
-    const responseMeta = {
-      url: rawUrl.href,
-      statusCode: response.status,
-      statusLine: response.statusText || '',
-      xRobotsTag: response.headers.get('x-robots-tag') ? [response.headers.get('x-robots-tag')] : [],
-      contentType: response.headers.get('content-type') ? [response.headers.get('content-type')] : [],
-      contentLanguage: response.headers.get('content-language') ? [response.headers.get('content-language')] : [],
-      link: response.headers.get('link') ? [response.headers.get('link')] : [],
-      cacheControl: response.headers.get('cache-control') ? [response.headers.get('cache-control')] : [],
-      redirectChain: [],
-    };
-    const facts = PageExtractor.extract(rawDocument, rawUrl, { performance: null });
-    const pageType = detectPageType(rawDocument, facts, responseMeta);
-    const productAudit = ProductPageAudit.inspect(facts, pageType);
-    const categoryAudit = CategoryPageAudit.inspect(facts, pageType, responseMeta);
-    const auditPolicy = await loadAuditPolicy(rawUrl.href);
-    const evaluation = evaluateWithAuditPolicy(facts, responseMeta, auditPolicy);
-    const contentAudit = ContentAudit.collect(rawDocument, {
-      facts,
-      responseMeta,
-      detectVisibility: false,
-    });
+  async function rawSourceReadBody(response) {
+    const announced = Number(response.headers.get('content-length'));
+    if (Number.isFinite(announced) && announced > RAW_SOURCE_MAX_BYTES) {
+      const error = new Error('Raw HTML exceeded configured size limit.');
+      error.code = 'too-large';
+      throw error;
+    }
+
+    if (!response.body || typeof response.body.getReader !== 'function') {
+      const buffer = await response.arrayBuffer();
+      if (buffer.byteLength > RAW_SOURCE_MAX_BYTES) {
+        const error = new Error('Raw HTML exceeded configured size limit.');
+        error.code = 'too-large';
+        throw error;
+      }
+      return { text: new TextDecoder().decode(buffer), sizeBytes: buffer.byteLength };
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    let sizeBytes = 0;
+    try {
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        sizeBytes += chunk.value.byteLength;
+        if (sizeBytes > RAW_SOURCE_MAX_BYTES) {
+          await reader.cancel().catch(() => {});
+          const error = new Error('Raw HTML exceeded configured size limit.');
+          error.code = 'too-large';
+          throw error;
+        }
+        text += decoder.decode(chunk.value, { stream: true });
+      }
+      text += decoder.decode();
+      return { text, sizeBytes };
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  function rawSourceFailure(operationId, reason) {
     return {
-      facts,
-      evaluation,
-      pageType,
-      productAudit,
-      categoryAudit,
-      responseMeta,
-      customRules: CustomRules.normalize(auditPolicy.rules),
-      domainProfile: auditPolicy.profile ? DomainProfiles.profileSummary(auditPolicy.profile) : null,
-      pageContext: pageContext(),
-      contentAudit,
+      operationId,
+      error: reason || 'network',
+      limits: { maxBytes: RAW_SOURCE_MAX_BYTES, timeoutMs: RAW_SOURCE_TIMEOUT_MS },
     };
+  }
+
+  async function fetchRawReport(operationIdValue) {
+    const operationId = String(operationIdValue || `raw-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    const previous = rawSourceOperations.get(operationId);
+    if (previous) previous.abort();
+    const controller = new AbortController();
+    rawSourceOperations.set(operationId, controller);
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, RAW_SOURCE_TIMEOUT_MS);
+    let response = null;
+
+    try {
+      response = await fetch(window.location.href, {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+      const contentType = response.headers.get('content-type') || '';
+      const htmlLike = !contentType || /(?:text\/html|application\/xhtml\+xml)/i.test(contentType);
+      if (!htmlLike) {
+        if (response.body && typeof response.body.cancel === 'function') response.body.cancel().catch(() => {});
+        return rawSourceFailure(operationId, 'not-html');
+      }
+
+      const body = await rawSourceReadBody(response);
+      const parser = new DOMParser();
+      const rawDocument = parser.parseFromString(body.text, 'text/html');
+      const rawUrl = new URL(response.url || window.location.href);
+      const responseMeta = {
+        url: rawUrl.href,
+        statusCode: response.status,
+        statusLine: response.statusText || '',
+        xRobotsTag: response.headers.get('x-robots-tag') ? [response.headers.get('x-robots-tag')] : [],
+        contentType: response.headers.get('content-type') ? [response.headers.get('content-type')] : [],
+        contentLanguage: response.headers.get('content-language') ? [response.headers.get('content-language')] : [],
+        link: response.headers.get('link') ? [response.headers.get('link')] : [],
+        cacheControl: response.headers.get('cache-control') ? [response.headers.get('cache-control')] : [],
+        redirectChain: [],
+      };
+      const facts = PageExtractor.extract(rawDocument, rawUrl, { performance: null });
+      const pageType = detectPageType(rawDocument, facts, responseMeta);
+      const productAudit = ProductPageAudit.inspect(facts, pageType);
+      const categoryAudit = CategoryPageAudit.inspect(facts, pageType, responseMeta);
+      const auditPolicy = await loadAuditPolicy(rawUrl.href);
+      const evaluation = evaluateWithAuditPolicy(facts, responseMeta, auditPolicy);
+      const contentAudit = ContentAudit.collect(rawDocument, {
+        facts,
+        responseMeta,
+        detectVisibility: false,
+      });
+      return {
+        operationId,
+        error: null,
+        sizeBytes: body.sizeBytes,
+        limits: { maxBytes: RAW_SOURCE_MAX_BYTES, timeoutMs: RAW_SOURCE_TIMEOUT_MS },
+        facts,
+        evaluation,
+        pageType,
+        productAudit,
+        categoryAudit,
+        responseMeta,
+        customRules: CustomRules.normalize(auditPolicy.rules),
+        domainProfile: auditPolicy.profile ? DomainProfiles.profileSummary(auditPolicy.profile) : null,
+        pageContext: pageContext(),
+        contentAudit,
+      };
+    } catch (error) {
+      let reason = error && error.code ? String(error.code) : 'network';
+      if (error && error.name === 'AbortError') reason = timedOut ? 'timeout' : 'cancelled';
+      return rawSourceFailure(operationId, reason);
+    } finally {
+      clearTimeout(timer);
+      if (rawSourceOperations.get(operationId) === controller) rawSourceOperations.delete(operationId);
+    }
+  }
+
+  function cancelRawSource(operationId) {
+    const controller = rawSourceOperations.get(String(operationId || ''));
+    if (!controller) return { cancelled: false };
+    controller.abort();
+    return { cancelled: true };
   }
 
   function notifyPageChanged() {
@@ -219,7 +312,8 @@
       clearHighlights();
       return Promise.resolve({ ok: true });
     }
-    if (message.type === 'seoInspector.fetchRaw') return fetchRawReport();
+    if (message.type === 'seoInspector.fetchRaw') return fetchRawReport(message.operationId);
+    if (message.type === 'seoInspector.cancelRaw') return Promise.resolve(cancelRawSource(message.operationId));
     if (message.type === 'seoInspector.watch') {
       setWatching(Boolean(message.enabled));
       return Promise.resolve({ ok: true });
