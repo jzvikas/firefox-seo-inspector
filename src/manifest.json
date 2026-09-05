@@ -31,7 +31,8 @@
       "background/canonical-background.js",
       "background/sitemap-membership-background.js",
       "background/link-background.js",
-      "background/security-background.js"
+      "background/security-background.js",
+      "background/compare-background.js"
     ]
   },
   "action": {
