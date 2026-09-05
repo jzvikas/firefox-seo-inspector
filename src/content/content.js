@@ -25,7 +25,8 @@ async function analyzeDocument(doc, locationLike, responseMeta) {
     viewportHeight: context.viewportHeight,
     getComputedStyle: typeof window.getComputedStyle === 'function' ? window.getComputedStyle.bind(window) : null,
   }, performance);
-  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: context, performance, performanceHints };
+  const assetAudit = AssetAudit.collect(doc, pageUrl, performance);
+  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: context, performance, performanceHints, assetAudit };
 }
 
 async function analyzeCurrentPage() {
@@ -117,7 +118,7 @@ function setWatching(enabled) {
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['content', 'href', 'rel', 'name', 'property', 'lang', 'alt', 'src', 'srcset', 'loading', 'width', 'height', 'async', 'defer', 'media', 'crossorigin'],
+    attributeFilter: ['content', 'href', 'rel', 'name', 'property', 'lang', 'alt', 'src', 'srcset', 'loading', 'width', 'height', 'async', 'defer', 'media', 'crossorigin', 'type', 'nomodule', 'disabled'],
   });
 }
 
