@@ -178,13 +178,13 @@ renderLinks = function renderLinksBounded() {
   const checkButton = el('button', '', linkCheckState.checking ? 'Checking…' : linkCheckState.report ? 'Check again' : 'Check HTTP status');
   checkButton.type = 'button';
   checkButton.disabled = linkCheckState.checking;
-  checkButton.addEventListener('click', () => runBoundedLinkCheck(links, Boolean(linkCheckState.report)));
+  checkButton.addEventListener('click', () => runBoundedLinkCheck(links, Boolean(linkCheckState.report)).catch((error) => handleAsyncUiFailure('link-check', error)));
   toolbar.appendChild(checkButton);
 
   if (linkCheckState.checking) {
     const cancelButton = el('button', '', 'Cancel');
     cancelButton.type = 'button';
-    cancelButton.addEventListener('click', () => cancelBoundedLinkCheck());
+    cancelButton.addEventListener('click', () => cancelBoundedLinkCheck().catch((error) => handleAsyncUiFailure('link-cancel', error)));
     toolbar.appendChild(cancelButton);
   }
 
