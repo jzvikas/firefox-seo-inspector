@@ -79,6 +79,7 @@ test('one lazy renderer exception is isolated and later Inspector panels still r
       tabs: {
         onActivated: { addListener() {} },
         onUpdated: { addListener() {} },
+        onRemoved: { addListener() {} },
         async sendMessage() { return { ok: true }; },
       },
       runtime: {
