@@ -49,7 +49,6 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Heading tree with in-page highlighting.
 - JSON-LD parsing with schema type detection, invalid JSON warnings, and basic Product checks.
 - Open Graph and Twitter/X card metadata inspection.
-- Per-URL local snapshots and regression diffs.
 - JSON report export and copyable issue list.
 - No telemetry, analytics, remote runtime scripts, accounts, or backend.
 
@@ -124,9 +123,21 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Dedicated filters for broken, redirecting, external, nofollow, sponsored, UGC, and generic-anchor links.
 - Anchor analysis works from already-extracted page link facts and does not send anchor text or page content to an external service.
 
+## Unreleased v0.4 work
+
+### Snapshot history
+
+- Multiple named, timestamped snapshots are stored locally for each exact normalized HTTP/HTTPS URL.
+- Each URL can retain up to 50 snapshots, ordered newest first.
+- Any saved snapshot can be selected as the baseline and compared with the current page.
+- The Compare panel supports saving, comparing, setting/clearing a baseline, and deleting individual snapshots.
+- Snapshot history can be exported as JSON and imported with a 5 MiB file-size safety limit; imports are validated and merged by snapshot ID.
+- Legacy single-snapshot `snapshot:<URL>` storage is migrated automatically into the versioned history format after the replacement history is safely written.
+- Snapshot history uses only the existing local extension storage permission and never uploads snapshots.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is multi-snapshot history, followed by richer regression detection and page comparison workflows.
+See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is richer regression detection, followed by page/tab comparison workflows.
 
 ## Install for development
 
@@ -151,6 +162,8 @@ The Performance panel reads the browser's local Navigation Timing and Resource T
 The Content panel performs a bounded local DOM scan and does not make network requests during normal inspection. Hidden-content output is limited to technical visibility signals and bounded element labels; it does not infer spam or intent.
 
 The Security panel reads current-page DOM/resource references plus selected security headers already observed on the main document. It does not fetch external security databases or issue extra security-audit requests. Cookie Secure/HttpOnly/SameSite inspection is not enabled, so the extension does not request cookie access for this feature.
+
+Snapshot history is stored only in `browser.storage.local`. The history format is versioned, capped at 50 records per exact normalized URL, and can be explicitly exported/imported by the user. No snapshot data is sent anywhere by the extension.
 
 **Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
 

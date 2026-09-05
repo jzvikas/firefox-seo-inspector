@@ -36,6 +36,11 @@ All notable changes to this project are documented here.
 - Live bounded link-check progress with cancellation plus a 1,000-entry in-memory session cache; explicit re-checks bypass the cache.
 - Dedicated Links filters for broken, redirecting, external, nofollow, sponsored, UGC, and generic-anchor links while retaining the existing 250-URL / six-concurrent-request safety limits.
 - Automated tests for anchor normalization, generic-anchor matching, anchor/URL consistency grouping, and network/rel-based link filtering.
+- Versioned local snapshot history with up to 50 named, timestamped snapshots per normalized URL, plus a selectable baseline snapshot.
+- Snapshot management in the Compare panel with save, compare, baseline, delete, JSON export, and bounded JSON import/merge actions.
+- Automatic migration of legacy single `snapshot:<URL>` records into the new history format after the new history has been written successfully.
+- Snapshot imports use a 5 MiB file-size limit, validate the import envelope, merge by snapshot ID, and keep all data in Firefox local extension storage.
+- Automated tests for snapshot history ordering/caps, baseline behavior, import/export merging, malformed import rejection, and legacy migration.
 
 ## [0.2.0] - 2026-09-05
 

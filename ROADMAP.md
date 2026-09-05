@@ -168,11 +168,11 @@ Goal: make the extension useful after deployments and repeated audits.
 
 ### Snapshot history
 
-- [ ] Multiple snapshots per URL.
-- [ ] Snapshot names and timestamps.
-- [ ] Baseline snapshot.
-- [ ] Delete and manage snapshots.
-- [ ] Import/export snapshot data.
+- [x] Multiple snapshots per URL.
+- [x] Snapshot names and timestamps.
+- [x] Baseline snapshot.
+- [x] Delete and manage snapshots.
+- [x] Import/export snapshot data.
 
 ### Regression detection
 
