@@ -12,10 +12,27 @@ function pageContext() {
   };
 }
 
-async function analyzeDocument(doc, locationLike, responseMeta, securityResponseMeta) {
-  const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
-  const evaluation = SeoCore.evaluateFacts(facts, responseMeta || null);
+async function loadCustomRulesConfig() {
+  try {
+    const stored = await browser.storage.local.get(CustomRules.STORAGE_KEY);
+    return CustomRules.normalize(stored && stored[CustomRules.STORAGE_KEY]);
+  } catch (_error) {
+    return CustomRules.normalize(null);
+  }
+}
+
+function evaluateWithCustomRules(facts, responseMeta, rulesConfig) {
+  const config = CustomRules.normalize(rulesConfig);
+  const base = SeoCore.evaluateFacts(facts, responseMeta || null, CustomRules.toSeoCoreOptions(config));
+  const evaluation = CustomRules.applyEvaluation(base, facts, config);
   evaluation.indexability = Indexability.analyze(facts, responseMeta || null);
+  return evaluation;
+}
+
+async function analyzeDocument(doc, locationLike, responseMeta, securityResponseMeta, customRulesConfig) {
+  const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
+  const rulesConfig = CustomRules.normalize(customRulesConfig);
+  const evaluation = evaluateWithCustomRules(facts, responseMeta || null, rulesConfig);
   const pageUrl = locationLike && locationLike.href ? locationLike.href : '';
   const performance = PerformanceAudit.collect(doc, window.performance, pageUrl);
   const context = pageContext();
@@ -43,6 +60,7 @@ async function analyzeDocument(doc, locationLike, responseMeta, securityResponse
     evaluation,
     responseMeta: responseMeta || null,
     securityResponseMeta: securityResponseMeta || null,
+    customRules: rulesConfig,
     pageContext: context,
     performance,
     performanceHints,
@@ -54,11 +72,12 @@ async function analyzeDocument(doc, locationLike, responseMeta, securityResponse
 }
 
 async function analyzeCurrentPage() {
-  const [responseMeta, securityResponseMeta] = await Promise.all([
+  const [responseMeta, securityResponseMeta, rulesConfig] = await Promise.all([
     browser.runtime.sendMessage({ type: 'seoInspector.getResponseMeta' }).catch(() => null),
     browser.runtime.sendMessage({ type: 'seoInspector.getSecurityResponseMeta' }).catch(() => null),
+    loadCustomRulesConfig(),
   ]);
-  return analyzeDocument(document, window.location, responseMeta, securityResponseMeta);
+  return analyzeDocument(document, window.location, responseMeta, securityResponseMeta, rulesConfig);
 }
 
 function clearHighlights() {
@@ -96,12 +115,15 @@ function highlightRefs(refs) {
 }
 
 async function fetchRawReport() {
-  const response = await fetch(window.location.href, {
-    method: 'GET',
-    credentials: 'include',
-    cache: 'no-store',
-    redirect: 'follow',
-  });
+  const [response, rulesConfig] = await Promise.all([
+    fetch(window.location.href, {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+      redirect: 'follow',
+    }),
+    loadCustomRulesConfig(),
+  ]);
   const html = await response.text();
   const parser = new DOMParser();
   const rawDocument = parser.parseFromString(html, 'text/html');
@@ -118,14 +140,13 @@ async function fetchRawReport() {
     redirectChain: [],
   };
   const facts = PageExtractor.extract(rawDocument, rawUrl, { performance: null });
-  const evaluation = SeoCore.evaluateFacts(facts, responseMeta);
-  evaluation.indexability = Indexability.analyze(facts, responseMeta);
+  const evaluation = evaluateWithCustomRules(facts, responseMeta, rulesConfig);
   const contentAudit = ContentAudit.collect(rawDocument, {
     facts,
     responseMeta,
     detectVisibility: false,
   });
-  return { facts, evaluation, responseMeta, pageContext: pageContext(), contentAudit };
+  return { facts, evaluation, responseMeta, customRules: rulesConfig, pageContext: pageContext(), contentAudit };
 }
 
 function notifyPageChanged() {
