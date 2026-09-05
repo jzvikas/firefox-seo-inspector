@@ -27,6 +27,9 @@ All notable changes to this project are documented here.
 - Advanced canonical-chain tracing with exact HTTP redirect hops, 4xx/5xx target diagnostics, multi-hop canonical detection, canonical/redirect loop detection, target canonical parsing, bounded depth, byte/time limits, and cancellation.
 - Advanced canonical diagnostics are shown directly in the Indexability panel with source/target URLs, stable-target state, canonical path, redirect path, per-level HTTP/canonical details, and severity-ranked issues.
 - Automated tests for stable/self canonicals, multi-hop chains, source/target loops, 4xx/5xx targets, exact redirect statuses, multiple target canonicals, depth caps, timeouts, cancellations, and network failures.
+- Dual-target sitemap membership scanning for both the current source URL and its canonical URL in one bounded, cancellable sitemap-index traversal.
+- Sitemap conflict diagnostics for source URLs that are present while non-canonical, redirecting, noindex/robots-blocked, or returning HTTP errors, with separate source/canonical sitemap and `lastmod` reporting.
+- Automated tests for sitemap target normalization, self-canonical deduplication, healthy membership, non-canonical/redirect/noindex/blocked/error conflicts, and false-positive prevention.
 
 ## [0.1.0] - 2026-09-05
 
