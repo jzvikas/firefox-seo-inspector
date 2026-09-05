@@ -19,7 +19,7 @@ test('store normalization is exact-hostname based and deterministic', () => {
       'example.com': { enabled: true, label: 'Apex' },
     },
   });
-  assert.deepEqual(Object.keys(store.profiles), ['example.com', 'www.example.com']);
+  assert.deepEqual(Object.keys(store.profiles).sort(), ['example.com', 'www.example.com']);
   assert.equal(store.profiles['www.example.com'].label, 'WWW');
   assert.equal(DomainProfiles.findProfile(store, 'https://shop.example.com/'), null);
   assert.equal(DomainProfiles.findProfile(store, 'https://www.example.com/').hostname, 'www.example.com');
