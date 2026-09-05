@@ -20,8 +20,29 @@ const minFirefox = Number.parseInt(gecko.strict_min_version, 10);
 if (!Number.isFinite(minFirefox) || minFirefox < 142) fail('strict_min_version must be Firefox 142 or newer for data_collection_permissions compatibility');
 const dataPermissions = gecko.data_collection_permissions && gecko.data_collection_permissions.required;
 if (!Array.isArray(dataPermissions) || dataPermissions.length !== 1 || dataPermissions[0] !== 'none') fail('local-first build must explicitly declare no data collection');
+
+const expectedPermissions = ['scripting', 'storage', 'tabs', 'webRequest'];
+const actualPermissions = Array.isArray(manifest.permissions) ? [...manifest.permissions].sort() : [];
+if (JSON.stringify(actualPermissions) !== JSON.stringify([...expectedPermissions].sort())) {
+  fail(`permissions must exactly match the audited allowlist: ${expectedPermissions.join(', ')}`);
+}
+if (manifest.optional_permissions || manifest.optional_host_permissions) fail('optional permissions are not allowed in the audited v1 build');
+
+const expectedHostPermissions = ['http://*/*', 'https://*/*'];
+const actualHostPermissions = Array.isArray(manifest.host_permissions) ? [...manifest.host_permissions].sort() : [];
+if (JSON.stringify(actualHostPermissions) !== JSON.stringify([...expectedHostPermissions].sort())) {
+  fail('host_permissions must stay limited to http://*/* and https://*/* for inspected-page and explicit audit requests');
+}
+if (manifest.externally_connectable) fail('externally_connectable is not allowed in the local-first build');
+
 if (!Array.isArray(manifest.content_scripts) || !manifest.content_scripts.length) fail('content_scripts are required');
-if (!Array.isArray(manifest.host_permissions) || !manifest.host_permissions.includes('https://*/*')) fail('HTTPS host permission is required for page inspection');
+for (const group of manifest.content_scripts) {
+  const matches = Array.isArray(group.matches) ? [...group.matches].sort() : [];
+  if (JSON.stringify(matches) !== JSON.stringify([...expectedHostPermissions].sort())) {
+    fail('content scripts must be limited to HTTP/HTTPS pages');
+  }
+}
+
 const csp = manifest.content_security_policy && manifest.content_security_policy.extension_pages;
 if (!csp || !csp.includes("script-src 'self'") || !csp.includes("object-src 'none'")) fail('restrictive extension CSP is required');
 if (/unsafe-eval|unsafe-inline|https?:/i.test(csp)) fail('extension CSP must not allow unsafe or remote script execution');
