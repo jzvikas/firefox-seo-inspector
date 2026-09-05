@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Static, manifest, and privacy checks
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Mozilla web-ext lint
+        run: npx --yes web-ext@10.6.0 lint --source-dir src
+
+      - name: Build deterministic XPI
+        run: npm run build
+
+      - name: Verify XPI contents and checksum
+        run: npm run verify:build
+
+      - name: Verify committed build is current
+        run: git diff --exit-code -- dist/
