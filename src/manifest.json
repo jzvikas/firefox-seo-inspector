@@ -22,9 +22,11 @@
       "lib/sitemap.js",
       "lib/head-signals.js",
       "lib/image-network-utils.js",
+      "lib/canonical-chain.js",
       "background/background.js",
       "background/hreflang-background.js",
-      "background/image-background.js"
+      "background/image-background.js",
+      "background/canonical-background.js"
     ]
   },
   "action": {
