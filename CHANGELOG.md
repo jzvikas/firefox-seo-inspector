@@ -6,6 +6,10 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Parameterized category/faceted URLs now combine canonical state, meta robots, and `X-Robots-Tag`, including effective `noindex` handling and explicit conflicting `index`/`noindex` diagnostics.
+- Category pagination can be checked on demand with the existing bounded, cancellable, credential-free link checker; broken, redirecting, and unknown pagination targets are summarized and broken anchors can be highlighted in-page.
+- Tabs and Crawler now group distinct URLs by pagination family and report repeated title/meta-description patterns while preserving filter/sort parameters so unrelated facets are not mixed together.
+- Shared pagination-family and link-result modeling plus regression/runtime tests cover page/offset/path pagination, facet-preserving family keys, metadata duplicate grouping, broken-link classification, script dependency order, and Category network UI wiring.
 - Dedicated **Category** panel with platform-neutral category/listing canonical diagnostics, bounded strong listing-item counts, empty/thin listing warnings, faceted-navigation inspection, and pagination diagnostics.
 - Local query-parameter classification for filter/facet, sort/order, pagination, tracking, session-like, and other parameters, plus index-bloat warnings for indexable self-canonical faceted URLs and duplicate-crawl-path warnings for tracking/session-like self-canonical URLs.
 - Bounded parameterized internal-link inventory with in-page highlighting for filter/sort/tracking/session-like links; listing-link evidence intentionally uses schema.org ItemList/Product signals instead of vendor-specific storefront selectors.
