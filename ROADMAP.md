@@ -259,17 +259,17 @@ Goal: move from single-page inspection to small-site and e-commerce workflows wi
 
 ### Crawler Lite
 
-- [ ] Crawl internal links from the current page.
-- [ ] Same-host restriction by default.
-- [ ] Configurable URL limit.
-- [ ] Configurable depth limit.
-- [ ] URL normalization and deduplication.
-- [ ] Pause/resume/cancel.
-- [ ] Crawl progress.
-- [ ] Status, title, description, H1, canonical, robots, and indexability collection.
-- [ ] Broken-link and redirect discovery.
-- [ ] Duplicate metadata detection.
-- [ ] CSV/JSON export.
+- [x] Crawl internal links from the current page.
+- [x] Same-host restriction by default.
+- [x] Configurable URL limit.
+- [x] Configurable depth limit.
+- [x] URL normalization and deduplication.
+- [x] Pause/resume/cancel.
+- [x] Crawl progress.
+- [x] Status, title, description, H1, canonical, robots, and indexability collection.
+- [x] Broken-link and redirect discovery.
+- [x] Duplicate metadata detection.
+- [x] CSV/JSON export.
 
 ### Page-type detection
 
@@ -316,8 +316,8 @@ Goal: move from single-page inspection to small-site and e-commerce workflows wi
 
 ### v0.5.0 done when
 
-- [ ] A small site section can be audited locally without an external crawler.
-- [ ] Crawl limits prevent accidental unbounded scans.
+- [x] A small site section can be audited locally without an external crawler.
+- [x] Crawl limits prevent accidental unbounded scans.
 - [ ] E-commerce checks stay platform-neutral and do not contain private/project-specific rules.
 
 ## v1.0.0 — Stable daily-use release
