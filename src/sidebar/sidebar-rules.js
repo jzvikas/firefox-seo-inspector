@@ -208,7 +208,7 @@ function renderRules() {
   if (!panel) return;
   clear(panel);
 
-  if (!rulesUiState.config && !rulesUiState.loading) loadRulesUiConfig().catch(() => {});
+  if (!rulesUiState.config && !rulesUiState.loading) loadRulesUiConfig().catch((error) => handleAsyncUiFailure('rules-load', error));
   const config = activeRulesConfig();
   const writable = storageSchemaIsWritable();
 
@@ -216,12 +216,12 @@ function renderRules() {
   const save = el('button', '', 'Save rules');
   save.type = 'button';
   save.disabled = !writable;
-  save.addEventListener('click', () => saveRulesFromEditor());
+  save.addEventListener('click', () => saveRulesFromEditor().catch((error) => handleAsyncUiFailure('rules-save', error)));
   toolbar.appendChild(save);
   const reset = el('button', '', 'Reset defaults');
   reset.type = 'button';
   reset.disabled = !writable;
-  reset.addEventListener('click', () => resetRulesToDefaults());
+  reset.addEventListener('click', () => resetRulesToDefaults().catch((error) => handleAsyncUiFailure('rules-reset', error)));
   toolbar.appendChild(reset);
   toolbar.appendChild(badge(`Rules v${config.version}`, 'ok'));
   panel.appendChild(toolbar);
