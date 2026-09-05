@@ -17,73 +17,73 @@ Goal: answer “can this URL be indexed, and if not, why?” in one place.
 
 ### Indexability engine
 
-- [ ] Single Indexability verdict: Indexable / Noindex / Blocked / Canonicalized / Redirected / Error.
-- [ ] Explain every reason behind the verdict.
-- [ ] Combine HTTP status, meta robots, X-Robots-Tag, canonical, robots.txt, and redirect state.
-- [ ] Detect conflicting indexability directives.
-- [ ] Detect raw HTML vs rendered-DOM changes that alter indexability.
+- [x] Single Indexability verdict: Indexable / Noindex / Blocked / Canonicalized / Redirected / Error.
+- [x] Explain every reason behind the verdict.
+- [x] Combine HTTP status, meta robots, X-Robots-Tag, canonical, robots.txt, and redirect state.
+- [x] Detect conflicting indexability directives.
+- [x] Detect raw HTML vs rendered-DOM changes that alter indexability.
 
 ### Canonical validation
 
-- [ ] Check canonical target HTTP status.
-- [ ] Follow and display canonical redirect chains.
-- [ ] Detect canonical targets returning 4xx/5xx.
-- [ ] Detect canonical loops and multi-hop canonical chains.
-- [ ] Detect cross-domain canonicals.
-- [ ] Detect protocol, hostname, trailing-slash, and query-parameter mismatches.
+- [x] Check canonical target HTTP status.
+- [x] Follow and display canonical redirect chains.
+- [x] Detect canonical targets returning 4xx/5xx.
+- [x] Detect canonical loops and multi-hop canonical chains.
+- [x] Detect cross-domain canonicals.
+- [x] Detect protocol, hostname, trailing-slash, and query-parameter mismatches.
 
 ### Redirect inspection
 
-- [ ] Show complete redirect chain.
-- [ ] Distinguish 301, 302, 303, 307, and 308.
-- [ ] Show final URL and hop count.
-- [ ] Detect redirect loops and excessive redirect chains.
-- [ ] Detect internal links that point to redirects.
+- [x] Show complete redirect chain.
+- [x] Distinguish 301, 302, 303, 307, and 308.
+- [x] Show final URL and hop count.
+- [x] Detect redirect loops and excessive redirect chains.
+- [x] Detect internal links that point to redirects.
 
 ### robots.txt
 
-- [ ] Discover `/robots.txt` automatically.
-- [ ] Show robots.txt HTTP status.
-- [ ] Determine whether the current URL is allowed or blocked.
-- [ ] Show matching user-agent and rule.
-- [ ] Discover sitemap declarations.
-- [ ] Detect malformed or inaccessible robots.txt.
+- [x] Discover `/robots.txt` automatically.
+- [x] Show robots.txt HTTP status.
+- [x] Determine whether the current URL is allowed or blocked.
+- [x] Show matching user-agent and rule.
+- [x] Discover sitemap declarations.
+- [x] Detect malformed or inaccessible robots.txt.
 
 ### Sitemap
 
-- [ ] Discover sitemap and sitemap indexes.
-- [ ] Determine whether the current canonical URL is present.
-- [ ] Warn when a noindex, redirect, non-canonical, or error URL is present in a sitemap.
-- [ ] Show `lastmod` when available.
+- [x] Discover sitemap and sitemap indexes.
+- [x] Determine whether the current canonical URL is present.
+- [x] Warn when a noindex, redirect, non-canonical, or error URL is present in a sitemap.
+- [x] Show `lastmod` when available.
 
 ### SERP preview
 
-- [ ] Google-style desktop preview.
-- [ ] Google-style mobile preview.
-- [ ] Title and description pixel-width estimation.
-- [ ] Truncation warnings.
+- [x] Google-style desktop preview.
+- [x] Google-style mobile preview.
+- [x] Title and description pixel-width estimation.
+- [x] Truncation warnings.
 
 ### Hreflang validation
 
-- [ ] Check reciprocal hreflang references.
-- [ ] Validate hreflang target status codes.
-- [ ] Detect redirecting, noindex, or non-canonical hreflang targets.
-- [ ] Validate self-reference and `x-default`.
+- [x] Check reciprocal hreflang references.
+- [x] Validate hreflang target status codes.
+- [x] Detect redirecting, noindex, or non-canonical hreflang targets.
+- [x] Validate self-reference and `x-default`.
 
 ### Image network checks
 
-- [ ] Retrieve actual image transfer/file size.
-- [ ] Detect broken images.
-- [ ] Detect image format from response/content type.
-- [ ] Rank oversized images by estimated waste.
+- [x] Retrieve actual image transfer/file size.
+- [x] Detect broken images.
+- [x] Detect image format from response/content type.
+- [x] Rank oversized images by estimated waste.
 
 ### v0.2.0 done when
 
-- [ ] A single page can be diagnosed for indexability without opening external tools.
-- [ ] All network checks are bounded, cancellable, and do not send credentials.
-- [ ] New rules and parsers have automated tests.
-- [ ] Mozilla `web-ext` validation has zero errors, warnings, and notices.
-- [ ] Generated XPI matches source exactly.
+- [x] A single page can be diagnosed for indexability without opening external tools.
+- [x] External target/network audit requests are bounded, cancellable where they can fan out, and do not send credentials. The explicit same-page **Compare raw HTML** action is the documented exception: it uses the current page's browser credentials so authenticated source remains comparable with the rendered page.
+- [x] New rules and parsers have automated tests.
+- [x] Mozilla `web-ext` validation has zero errors, warnings, and notices.
+- [x] Generated XPI matches source exactly.
 
 ## v0.3.0 — Performance, resources, content, and security
 
