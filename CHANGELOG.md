@@ -24,6 +24,9 @@ All notable changes to this project are documented here.
 - On-demand image network audit with credential-free HEAD checks and bounded Range fallback for file size/status discovery, redirects, broken resources, and response Content-Type.
 - Image optimization ranking by estimated wasted bytes using intrinsic dimensions, rendered dimensions, and page device-pixel ratio, with format and size-source reporting.
 - Automated tests for image format detection, byte/waste calculations, DPR handling, Content-Length/Content-Range parsing, Range fallback decisions, URL deduplication, and result ranking.
+- Advanced canonical-chain tracing with exact HTTP redirect hops, 4xx/5xx target diagnostics, multi-hop canonical detection, canonical/redirect loop detection, target canonical parsing, bounded depth, byte/time limits, and cancellation.
+- Advanced canonical diagnostics are shown directly in the Indexability panel with source/target URLs, stable-target state, canonical path, redirect path, per-level HTTP/canonical details, and severity-ranked issues.
+- Automated tests for stable/self canonicals, multi-hop chains, source/target loops, 4xx/5xx targets, exact redirect statuses, multiple target canonicals, depth caps, timeouts, cancellations, and network failures.
 
 ## [0.1.0] - 2026-09-05
 
