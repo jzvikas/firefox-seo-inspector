@@ -62,6 +62,7 @@
         "lib/page-extractor.js",
         "lib/page-type.js",
         "lib/page-type-dom.js",
+        "lib/product-page-audit.js",
         "content/content.js"
       ],
       "run_at": "document_idle"
