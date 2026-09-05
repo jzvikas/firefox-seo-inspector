@@ -118,12 +118,22 @@ function harness() {
   };
 }
 
-test('manifest uses a toolbar launcher and no longer registers a Firefox sidebar', () => {
+test('manifest uses a toolbar launcher, neutral branding, and no longer registers a Firefox sidebar', () => {
   const manifest = JSON.parse(source('src/manifest.json'));
+  assert.equal(manifest.name, 'SEO Inspector');
+  assert.doesNotMatch(manifest.name, /firefox|mozilla/i);
+  assert.doesNotMatch(manifest.action.default_title, /firefox|mozilla/i);
   assert.equal(manifest.action.default_popup, 'launcher/launcher.html');
   assert.equal(Object.prototype.hasOwnProperty.call(manifest, 'sidebar_action'), false);
   assert.ok(manifest.background.scripts.includes('background/window-background.js'));
   assert.deepEqual(manifest.permissions, ['storage', 'tabs', 'webRequest']);
+
+  const inspectorHtml = source('src/sidebar/sidebar.html');
+  const launcherHtml = source('src/launcher/launcher.html');
+  assert.match(inspectorHtml, /<title>SEO Inspector<\/title>/);
+  assert.match(launcherHtml, /<title>SEO Inspector<\/title>/);
+  assert.doesNotMatch(inspectorHtml.match(/<title>[^<]+<\/title>/)[0], /firefox|mozilla/i);
+  assert.doesNotMatch(launcherHtml.match(/<title>[^<]+<\/title>/)[0], /firefox|mozilla/i);
 });
 
 test('detached inspector creates one resizable popup window and focuses it on later opens', async () => {
