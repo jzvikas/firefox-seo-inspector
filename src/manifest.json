@@ -53,6 +53,7 @@
       ],
       "js": [
         "lib/seo-core.js",
+        "lib/custom-rules.js",
         "lib/indexability.js",
         "lib/performance-audit.js",
         "lib/performance-hints.js",
