@@ -1,5 +1,8 @@
 'use strict';
 
+const LINK_RENDER_BATCH = 100;
+const LINK_RENDER_MAX = 500;
+
 const linkCheckState = {
   pageUrl: '',
   checking: false,
@@ -9,6 +12,7 @@ const linkCheckState = {
   progressChecked: 0,
   progressRequested: 0,
   filter: 'all',
+  visibleLimit: LINK_RENDER_BATCH,
 };
 
 function linkOperationId() {
@@ -27,6 +31,7 @@ function syncLinkCheckState(pageUrlValue) {
   linkCheckState.progressChecked = 0;
   linkCheckState.progressRequested = 0;
   linkCheckState.filter = 'all';
+  linkCheckState.visibleLimit = LINK_RENDER_BATCH;
 }
 
 async function runBoundedLinkCheck(links, force) {
@@ -131,12 +136,35 @@ function appendLinkFilter(toolbar, links) {
   });
   select.addEventListener('change', () => {
     linkCheckState.filter = select.value;
+    linkCheckState.visibleLimit = LINK_RENDER_BATCH;
     renderLinks();
   });
   toolbar.appendChild(select);
 
   const filtered = LinkAudit.filterLinks(links, state.linkResults, linkCheckState.filter);
-  toolbar.appendChild(badge(`${filtered.length}/${links.length} shown`, 'ok'));
+  toolbar.appendChild(badge(`${filtered.length}/${links.length} match`, 'ok'));
+}
+
+function appendLinkRenderPager(panel, total) {
+  const renderCap = Math.min(total, LINK_RENDER_MAX);
+  const shown = Math.min(linkCheckState.visibleLimit, renderCap);
+  if (shown < renderCap) {
+    const controls = el('div', 'toolbar');
+    const next = Math.min(LINK_RENDER_BATCH, renderCap - shown);
+    const more = el('button', '', `Show next ${next} links`);
+    more.type = 'button';
+    more.addEventListener('click', () => {
+      linkCheckState.visibleLimit = Math.min(LINK_RENDER_MAX, linkCheckState.visibleLimit + LINK_RENDER_BATCH);
+      renderLinks();
+    });
+    controls.appendChild(more);
+    controls.appendChild(el('span', 'muted', `Rendering ${shown} of ${total} matching links.`));
+    panel.appendChild(controls);
+    return;
+  }
+  if (total > LINK_RENDER_MAX) {
+    panel.appendChild(el('div', 'muted', `Rendering is capped at ${LINK_RENDER_MAX} of ${total} matching links to keep the Inspector responsive. Full link data remains available to audit logic and exports.`));
+  }
 }
 
 renderLinks = function renderLinksBounded() {
@@ -210,7 +238,8 @@ renderLinks = function renderLinksBounded() {
   table.appendChild(head);
   const body = document.createElement('tbody');
 
-  filteredLinks.slice(0, 500).forEach((link) => {
+  const renderLimit = Math.min(linkCheckState.visibleLimit, LINK_RENDER_MAX);
+  filteredLinks.slice(0, renderLimit).forEach((link) => {
     const row = document.createElement('tr');
     const status = statusForLink(link);
     row.appendChild(el('td', '', linkStatusText(status)));
@@ -224,7 +253,7 @@ renderLinks = function renderLinksBounded() {
   wrap.appendChild(table);
   panel.appendChild(wrap);
   if (!filteredLinks.length) panel.appendChild(el('div', 'empty', 'No links match this filter.'));
-  if (filteredLinks.length > 500) panel.appendChild(el('div', 'muted', `Showing first 500 of ${filteredLinks.length} matching links.`));
+  else appendLinkRenderPager(panel, filteredLinks.length);
 };
 
 browser.runtime.onMessage.addListener((message) => {
@@ -235,7 +264,7 @@ browser.runtime.onMessage.addListener((message) => {
   if (message.result && message.result.url) {
     state.linkResults.set(SeoCore.normalizedUrl(message.result.url), message.result);
   }
-  if (linkCheckState.progressChecked === linkCheckState.progressRequested || linkCheckState.progressChecked % 5 === 0) renderLinks();
+  if (linkCheckState.progressChecked === linkCheckState.progressRequested || linkCheckState.progressChecked % 25 === 0) renderLinks();
   return undefined;
 });
 
