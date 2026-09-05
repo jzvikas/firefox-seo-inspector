@@ -117,13 +117,13 @@ function appendCanonicalChainCard(panel) {
   const checkButton = el('button', '', canonicalChainState.checking ? 'Tracing…' : canonicalChainState.report ? 'Trace again' : 'Trace canonical chain');
   checkButton.type = 'button';
   checkButton.disabled = canonicalChainState.checking;
-  checkButton.addEventListener('click', () => runCanonicalChainCheck(pageUrlValue, canonicalUrlValue));
+  checkButton.addEventListener('click', () => runCanonicalChainCheck(pageUrlValue, canonicalUrlValue).catch((error) => handleAsyncUiFailure('canonical-check', error)));
   toolbar.appendChild(checkButton);
 
   if (canonicalChainState.checking) {
     const cancelButton = el('button', '', 'Cancel');
     cancelButton.type = 'button';
-    cancelButton.addEventListener('click', () => cancelCanonicalChainCheck());
+    cancelButton.addEventListener('click', () => cancelCanonicalChainCheck().catch((error) => handleAsyncUiFailure('canonical-cancel', error)));
     toolbar.appendChild(cancelButton);
   }
   node.appendChild(toolbar);
