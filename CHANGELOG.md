@@ -6,6 +6,9 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Versioned global `browser.storage.local` schema coordination with `storageSchema:v1`, deterministic normalization of Rules/Profiles/Snapshot history, and startup gating so persistent data is adopted before audits or UI writes use it.
+- Failure-safe legacy snapshot migration writes the replacement history before deleting old `snapshot:*` keys and advances the global schema marker last; interrupted writes/cleanup remain retryable and idempotent.
+- Downgrade protection keeps newer local schemas read-only in older extension builds: audits and exports remain available while Rules/Profile/Snapshot mutations are disabled to avoid destructive rollback data loss.
 - Automatic inspected-tab recovery after an extension reload: the Inspector locally pings the active HTTP/HTTPS tab and, only when the content script is missing, restores its own manifest-declared packaged content-script bundle through Firefox `scripting` without requiring a website reload.
 - Explicit unsupported/restricted-page states for Firefox internal pages, local files, non-HTTP schemes, and HTTP/HTTPS pages where Firefox refuses extension injection, replacing the previous generic reload advice.
 - Per-panel Inspector renderer error boundaries plus visible handling for uncaught window errors and unhandled promise rejections, so one UI failure no longer has to collapse the entire detached Inspector into an apparently blank state.
