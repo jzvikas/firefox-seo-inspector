@@ -329,7 +329,7 @@ Goal: make the extension dependable enough for continuous personal use.
 - [ ] Resolve all known critical and high-priority bugs.
 - [ ] No unhandled promise rejections or uncaught extension errors in normal workflows.
 - [x] Graceful behavior on restricted Firefox pages and unsupported URL schemes.
-- [ ] Cancellation and timeout handling for all network-heavy operations.
+- [x] Cancellation and timeout handling for all network-heavy operations.
 - [x] Local-storage schema/version migration strategy.
 
 ### Performance
