@@ -19,3 +19,8 @@ All notable changes to this project are documented here.
 - JSON export and issue-list clipboard export.
 - Local-first privacy model with no telemetry, analytics, backend, or remote runtime code.
 - Dependency-free static checks, privacy checks, unit tests, deterministic XPI build, package verification, pinned Mozilla `web-ext` validation in CI, and GitHub Actions CI.
+
+### Fixed
+
+- Added the Firefox Manifest V3 add-on ID required by Mozilla validation.
+- Added an explicit Firefox `data_collection_permissions` declaration of `none`, matching the local-only privacy model.
