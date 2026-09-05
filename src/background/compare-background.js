@@ -2,6 +2,8 @@
 
 const COMPARE_PAGE_MAX_BYTES = 2 * 1024 * 1024;
 const COMPARE_PAGE_TIMEOUT_MS = 12000;
+const COMPARE_SCAN_TIMEOUT_MS = 15000;
+const compareOperations = new Map();
 
 function compareHttpUrl(value) {
   try {
@@ -46,10 +48,33 @@ function compareSecurityResponseMeta(response, finalUrl) {
   };
 }
 
+function compareLinkedController(timeoutMs, externalSignal) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+  }
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  return {
+    controller,
+    timedOut: () => timedOut,
+    cleanup() {
+      clearTimeout(timer);
+      if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort);
+    },
+  };
+}
+
 async function compareReadBody(response, maxBytes) {
   const lengthHeader = response.headers.get('content-length');
   const announced = Number(lengthHeader);
   if (Number.isFinite(announced) && announced > maxBytes) {
+    if (response.body && typeof response.body.cancel === 'function') response.body.cancel().catch(() => {});
     const error = new Error('Response exceeded configured size limit.');
     error.code = 'too-large';
     throw error;
@@ -89,18 +114,13 @@ async function compareReadBody(response, maxBytes) {
   }
 }
 
-async function fetchComparePage(value) {
+async function fetchComparePage(value, externalSignal) {
   const requestedUrl = compareHttpUrl(value);
   if (!requestedUrl) {
     return { requestedUrl: String(value || ''), url: '', status: 0, redirected: false, sizeBytes: 0, text: '', error: 'invalid-url', responseMeta: null, securityResponseMeta: null };
   }
 
-  const controller = new AbortController();
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, COMPARE_PAGE_TIMEOUT_MS);
+  const linked = compareLinkedController(COMPARE_PAGE_TIMEOUT_MS, externalSignal || null);
   let response = null;
 
   try {
@@ -110,12 +130,13 @@ async function fetchComparePage(value) {
       credentials: 'omit',
       referrerPolicy: 'no-referrer',
       cache: 'no-store',
-      signal: controller.signal,
+      signal: linked.controller.signal,
     });
     const finalUrl = compareHttpUrl(response.url || requestedUrl) || requestedUrl;
     const contentType = response.headers.get('content-type') || '';
     const htmlLike = !contentType || /(?:text\/html|application\/xhtml\+xml)/i.test(contentType);
     if (!htmlLike) {
+      if (response.body && typeof response.body.cancel === 'function') response.body.cancel().catch(() => {});
       return {
         requestedUrl,
         url: finalUrl,
@@ -148,7 +169,13 @@ async function fetchComparePage(value) {
   } catch (error) {
     let reason = 'network';
     if (error && error.code) reason = error.code;
-    else if (error && error.name === 'AbortError') reason = timedOut ? 'timeout' : 'cancelled';
+    else if (error && error.name === 'AbortError') {
+      reason = externalSignal && externalSignal.aborted
+        ? 'cancelled'
+        : linked.timedOut()
+          ? 'timeout'
+          : 'cancelled';
+    }
     const finalUrl = response ? compareHttpUrl(response.url || requestedUrl) || requestedUrl : requestedUrl;
     return {
       requestedUrl,
@@ -164,11 +191,56 @@ async function fetchComparePage(value) {
       limits: { maxBytes: COMPARE_PAGE_MAX_BYTES, timeoutMs: COMPARE_PAGE_TIMEOUT_MS },
     };
   } finally {
-    clearTimeout(timer);
+    linked.cleanup();
   }
 }
 
+async function fetchComparePages(message) {
+  const operationId = String(message && message.operationId || `compare-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const previous = compareOperations.get(operationId);
+  if (previous) previous.abort();
+  const controller = new AbortController();
+  compareOperations.set(operationId, controller);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, COMPARE_SCAN_TIMEOUT_MS);
+
+  try {
+    const [left, right] = await Promise.all([
+      fetchComparePage(message && message.urlA, controller.signal),
+      fetchComparePage(message && message.urlB, controller.signal),
+    ]);
+    return {
+      operationId,
+      left,
+      right,
+      cancelled: controller.signal.aborted && !timedOut,
+      timedOut,
+      limits: {
+        maxBytesPerUrl: COMPARE_PAGE_MAX_BYTES,
+        requestTimeoutMs: COMPARE_PAGE_TIMEOUT_MS,
+        scanTimeoutMs: COMPARE_SCAN_TIMEOUT_MS,
+      },
+    };
+  } finally {
+    clearTimeout(timer);
+    if (compareOperations.get(operationId) === controller) compareOperations.delete(operationId);
+  }
+}
+
+function cancelComparePages(operationId) {
+  const controller = compareOperations.get(String(operationId || ''));
+  if (!controller) return { cancelled: false };
+  controller.abort();
+  return { cancelled: true };
+}
+
 browser.runtime.onMessage.addListener((message) => {
-  if (!message || message.type !== 'seoInspector.fetchComparePage') return undefined;
-  return fetchComparePage(message.url);
+  if (!message || typeof message !== 'object') return undefined;
+  if (message.type === 'seoInspector.fetchComparePage') return fetchComparePage(message.url, null);
+  if (message.type === 'seoInspector.fetchComparePages') return fetchComparePages(message);
+  if (message.type === 'seoInspector.cancelComparePages') return Promise.resolve(cancelComparePages(message.operationId));
+  return undefined;
 });

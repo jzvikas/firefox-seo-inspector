@@ -1,5 +1,114 @@
 'use strict';
 
+const rawSourceUiState = {
+  loading: false,
+  operationId: '',
+  tabId: null,
+  pageUrl: '',
+  error: '',
+};
+
+function rawSourceOperationId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return `raw-${crypto.randomUUID()}`;
+  return `raw-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function rawSourceErrorMessage(result) {
+  const reason = result && result.error ? String(result.error) : '';
+  if (!reason) return '';
+  if (reason === 'timeout') return 'Raw HTML fetch exceeded the 12-second timeout.';
+  if (reason === 'too-large') return 'Raw HTML exceeded the 2 MiB safety limit.';
+  if (reason === 'not-html') return 'Raw source response is not HTML/XHTML.';
+  if (reason === 'cancelled') return 'Raw HTML fetch was cancelled.';
+  if (reason === 'invalid-url') return 'Raw HTML fetch requires an HTTP or HTTPS page.';
+  return `Raw HTML fetch failed (${reason}).`;
+}
+
+function rawSourceRenderConsumers() {
+  try { renderContent(); } catch (_error) {}
+  try { renderCompare(); } catch (_error) {}
+}
+
+function rawSourceStillCurrent(operationId, tabId, pageUrl) {
+  const currentUrl = state.report && state.report.facts ? String(state.report.facts.url || '') : '';
+  return rawSourceUiState.operationId === operationId
+    && state.tabId === tabId
+    && currentUrl === pageUrl;
+}
+
+async function runRawSourceFetch() {
+  if (rawSourceUiState.loading || !state.report || typeof state.tabId !== 'number') return null;
+  const operationId = rawSourceOperationId();
+  const sourceTabId = state.tabId;
+  const sourceUrl = state.report && state.report.facts ? String(state.report.facts.url || '') : '';
+  rawSourceUiState.loading = true;
+  rawSourceUiState.operationId = operationId;
+  rawSourceUiState.tabId = sourceTabId;
+  rawSourceUiState.pageUrl = sourceUrl;
+  rawSourceUiState.error = '';
+  rawSourceRenderConsumers();
+  try {
+    const result = await browser.tabs.sendMessage(sourceTabId, { type: 'seoInspector.fetchRaw', operationId });
+    if (!rawSourceStillCurrent(operationId, sourceTabId, sourceUrl)) return null;
+    const error = rawSourceErrorMessage(result);
+    if (error) {
+      state.rawReport = null;
+      state.rawDiff = null;
+      rawSourceUiState.error = error;
+      return result;
+    }
+    if (!result || !result.facts) {
+      state.rawReport = null;
+      state.rawDiff = null;
+      rawSourceUiState.error = 'Raw HTML fetch returned no usable audit data.';
+      return result || null;
+    }
+    state.rawReport = result;
+    state.rawDiff = SeoCore.diffPageFacts(state.report.facts, result.facts);
+    return result;
+  } catch (_error) {
+    if (rawSourceStillCurrent(operationId, sourceTabId, sourceUrl)) {
+      state.rawReport = null;
+      state.rawDiff = null;
+      rawSourceUiState.error = 'Raw HTML fetch failed because the inspected tab became unavailable.';
+    }
+    return null;
+  } finally {
+    if (rawSourceUiState.operationId === operationId) {
+      rawSourceUiState.loading = false;
+      rawSourceUiState.operationId = '';
+      rawSourceUiState.tabId = null;
+      rawSourceUiState.pageUrl = '';
+      rawSourceRenderConsumers();
+    }
+  }
+}
+
+async function cancelRawSourceFetch() {
+  const operationId = rawSourceUiState.operationId;
+  const tabId = rawSourceUiState.tabId;
+  if (!rawSourceUiState.loading || !operationId || typeof tabId !== 'number') return;
+  try {
+    await browser.tabs.sendMessage(tabId, { type: 'seoInspector.cancelRaw', operationId });
+  } catch (_error) {
+    rawSourceUiState.error = 'Raw HTML cancellation could not reach the inspected tab.';
+    rawSourceUiState.loading = false;
+    rawSourceUiState.operationId = '';
+    rawSourceUiState.tabId = null;
+    rawSourceUiState.pageUrl = '';
+    rawSourceRenderConsumers();
+  }
+}
+
+function appendRawSourceStatus(container) {
+  if (rawSourceUiState.error) {
+    const issue = el('div', rawSourceUiState.error.includes('cancelled') ? 'issue info' : 'issue warning');
+    issue.appendChild(el('div', 'issue-message', rawSourceUiState.error));
+    container.appendChild(issue);
+  }
+  container.appendChild(el('div', 'muted', 'Authenticated same-page raw source · max 2 MiB · 12-second timeout · cancellable · kept local.'));
+}
+
 function contentIssueList(container, issues) {
   const items = Array.isArray(issues) ? issues : [];
   if (!items.length) {
@@ -52,22 +161,15 @@ function renderContent() {
   const raw = el('div', 'card');
   raw.appendChild(el('div', 'card-header', 'Raw HTML vs rendered text'));
   const rawToolbar = el('div', 'toolbar');
-  const rawButton = el('button', '', state.rawReport ? 'Refresh raw HTML' : 'Compare raw HTML');
+  const rawButton = el('button', '', rawSourceUiState.loading ? 'Cancel raw HTML' : state.rawReport ? 'Refresh raw HTML' : 'Compare raw HTML');
   rawButton.type = 'button';
-  rawButton.addEventListener('click', async () => {
-    rawButton.disabled = true;
-    rawButton.textContent = 'Fetching…';
-    try {
-      state.rawReport = await sendToTab({ type: 'seoInspector.fetchRaw' });
-      state.rawDiff = SeoCore.diffPageFacts(state.report.facts, state.rawReport.facts);
-    } catch (_error) {
-      state.rawReport = null;
-      state.rawDiff = null;
-    }
-    renderContent();
+  rawButton.addEventListener('click', () => {
+    if (rawSourceUiState.loading) cancelRawSourceFetch().catch(() => {});
+    else runRawSourceFetch().catch(() => {});
   });
   rawToolbar.appendChild(rawButton);
   raw.appendChild(rawToolbar);
+  appendRawSourceStatus(raw);
   if (state.rawReport && state.rawReport.contentAudit) {
     const rawText = state.rawReport.contentAudit.text || {};
     const rawWords = Number(rawText.allWords) || 0;
@@ -78,7 +180,8 @@ function renderContent() {
     addRow(raw, 'Rendered visible words', visibleWords);
     addRow(raw, 'Raw → rendered DOM delta', renderedWords - rawWords);
     addRow(raw, 'Rendered DOM → visible delta', visibleWords - renderedWords);
-  } else {
+    if (Number(state.rawReport.sizeBytes) > 0) addRow(raw, 'Raw source bytes read', state.rawReport.sizeBytes);
+  } else if (!rawSourceUiState.loading && !rawSourceUiState.error) {
     raw.appendChild(el('div', 'muted', 'Run this only when needed. It re-fetches the current page source using the current page session so authenticated source can be compared locally.'));
   }
   panel.appendChild(raw);

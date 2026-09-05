@@ -6,6 +6,9 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Authenticated same-page **Compare raw HTML** requests are now capped at 2 MiB, limited to 12 seconds, explicitly cancellable from Content and Compare, and pinned to the originating tab/page so a late response cannot overwrite a newer inspected page.
+- Explicit URL A vs URL B comparison now runs both credential-free requests under one cancellable operation with the existing 2 MiB/12-second per-URL bounds plus a 15-second total scan timeout and a visible Cancel control.
+- Network-cancellation regression coverage verifies aggregate URL-comparison aborts, raw-source byte/time/cancel wiring, and legacy link/sitemap scan timeout semantics.
 - Versioned global `browser.storage.local` schema coordination with `storageSchema:v1`, deterministic normalization of Rules/Profiles/Snapshot history, and startup gating so persistent data is adopted before audits or UI writes use it.
 - Failure-safe legacy snapshot migration writes the replacement history before deleting old `snapshot:*` keys and advances the global schema marker last; interrupted writes/cleanup remain retryable and idempotent.
 - Downgrade protection keeps newer local schemas read-only in older extension builds: audits and exports remain available while Rules/Profile/Snapshot mutations are disabled to avoid destructive rollback data loss.
@@ -107,6 +110,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Legacy `seoInspector.checkLinks` fan-out now has a 30-second total scan timeout, cancellation-aware request signals, partial-result reporting, and separate `cancelled` / `timedOut` states; the legacy sitemap route also distinguishes user cancellation from scan timeout instead of returning one ambiguous state.
 - Detached Inspector recovery now validates that a persisted popup still contains the live extension page after an add-on reload/update; stale blank popups are removed and recreated instead of being focused forever. Regression coverage reproduces the blank-window state explicitly.
 - Restored sidebar startup after the page-comparison update by backing the compare UI's active-tab context with the canonical sidebar `state.tabId` instead of an undefined global.
 - Added an automated Node `vm` sidebar startup smoke test so the page-comparison script chain is executed together and this class of runtime `ReferenceError` is caught by CI.

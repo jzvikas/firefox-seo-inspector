@@ -9,6 +9,8 @@ const pageCompareState = {
   urlA: '',
   urlB: '',
   loading: false,
+  loadingMode: '',
+  operationId: '',
   error: '',
   result: null,
   leftLabel: '',
@@ -28,6 +30,11 @@ function pageCompareIsHttpUrl(value) {
   } catch (_error) {
     return false;
   }
+}
+
+function pageCompareOperationId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return `compare-${crypto.randomUUID()}`;
+  return `compare-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function pageCompareSyncCurrentTab() {
@@ -85,6 +92,7 @@ async function runOpenTabComparison(tabId) {
   }
 
   pageCompareState.loading = true;
+  pageCompareState.loadingMode = 'tab';
   pageCompareState.error = '';
   renderCompare();
   try {
@@ -99,6 +107,7 @@ async function runOpenTabComparison(tabId) {
     pageCompareState.error = 'Could not analyze the selected tab. Reload that page if it was open before the extension was loaded, then try again.';
   } finally {
     pageCompareState.loading = false;
+    pageCompareState.loadingMode = '';
     renderCompare();
   }
 }
@@ -111,6 +120,7 @@ function fetchedCompareError(resource, label) {
   if (reason === 'timeout') return `${label}: request exceeded the 12-second comparison timeout.`;
   if (reason === 'too-large') return `${label}: HTML exceeded the 2 MiB comparison safety limit.`;
   if (reason === 'not-html') return `${label}: response is not HTML/XHTML.`;
+  if (reason === 'cancelled') return `${label}: request was cancelled.`;
   return `${label}: page could not be fetched (${reason}).`;
 }
 
@@ -141,9 +151,18 @@ function reportFromFetchedCompare(resource) {
   return { facts, evaluation, responseMeta, securityResponseMeta, securityAudit };
 }
 
-async function fetchComparableUrl(value) {
-  const response = await browser.runtime.sendMessage({ type: 'seoInspector.fetchComparePage', url: value });
-  return response;
+async function cancelUrlComparison() {
+  const operationId = pageCompareState.operationId;
+  if (!pageCompareState.loading || pageCompareState.loadingMode !== 'url' || !operationId) return;
+  try {
+    await browser.runtime.sendMessage({ type: 'seoInspector.cancelComparePages', operationId });
+  } catch (_error) {
+    pageCompareState.error = 'Could not cancel the URL comparison operation.';
+    pageCompareState.loading = false;
+    pageCompareState.loadingMode = '';
+    pageCompareState.operationId = '';
+    renderCompare();
+  }
 }
 
 async function runUrlComparison(urlA, urlB) {
@@ -156,14 +175,25 @@ async function runUrlComparison(urlA, urlB) {
     return;
   }
 
+  const operationId = pageCompareOperationId();
   pageCompareState.loading = true;
+  pageCompareState.loadingMode = 'url';
+  pageCompareState.operationId = operationId;
   pageCompareState.error = '';
   renderCompare();
   try {
-    const [leftResource, rightResource] = await Promise.all([
-      fetchComparableUrl(pageCompareState.urlA),
-      fetchComparableUrl(pageCompareState.urlB),
-    ]);
+    const operation = await browser.runtime.sendMessage({
+      type: 'seoInspector.fetchComparePages',
+      operationId,
+      urlA: pageCompareState.urlA,
+      urlB: pageCompareState.urlB,
+    });
+    if (pageCompareState.operationId !== operationId) return;
+    if (!operation) throw new Error('URL comparison returned no response.');
+    if (operation.timedOut) throw new Error('URL comparison exceeded the 15-second scan timeout.');
+    if (operation.cancelled) throw new Error('URL comparison was cancelled.');
+    const leftResource = operation.left;
+    const rightResource = operation.right;
     const leftError = fetchedCompareError(leftResource, 'URL A');
     const rightError = fetchedCompareError(rightResource, 'URL B');
     if (leftError || rightError) throw new Error([leftError, rightError].filter(Boolean).join(' '));
@@ -174,11 +204,17 @@ async function runUrlComparison(urlA, urlB) {
     pageCompareState.rightLabel = `URL B · ${rightResource.url || pageCompareState.urlB}`;
     pageCompareState.mode = 'url';
   } catch (error) {
-    pageCompareState.result = null;
-    pageCompareState.error = error && error.message ? error.message : 'URL comparison failed.';
+    if (pageCompareState.operationId === operationId) {
+      pageCompareState.result = null;
+      pageCompareState.error = error && error.message ? error.message : 'URL comparison failed.';
+    }
   } finally {
-    pageCompareState.loading = false;
-    renderCompare();
+    if (pageCompareState.operationId === operationId) {
+      pageCompareState.loading = false;
+      pageCompareState.loadingMode = '';
+      pageCompareState.operationId = '';
+      renderCompare();
+    }
   }
 }
 
@@ -221,7 +257,7 @@ function appendOpenTabCompareControls(cardNode) {
   }
   toolbar.appendChild(select);
 
-  const compareButton = el('button', '', pageCompareState.loading ? 'Comparing…' : 'Compare tab');
+  const compareButton = el('button', '', pageCompareState.loadingMode === 'tab' ? 'Comparing…' : 'Compare tab');
   compareButton.type = 'button';
   compareButton.disabled = pageCompareState.loading || !pageCompareState.tabs.length;
   compareButton.addEventListener('click', () => runOpenTabComparison(select.value).catch(() => {}));
@@ -229,7 +265,7 @@ function appendOpenTabCompareControls(cardNode) {
 
   const refreshButton = el('button', '', 'Refresh tab list');
   refreshButton.type = 'button';
-  refreshButton.disabled = pageCompareState.tabsLoading;
+  refreshButton.disabled = pageCompareState.tabsLoading || pageCompareState.loading;
   refreshButton.addEventListener('click', () => {
     pageCompareState.tabsLoaded = false;
     refreshComparableTabs().catch(() => {});
@@ -247,6 +283,7 @@ function appendUrlCompareControls(cardNode) {
   inputA.placeholder = 'https://example.com/page-a';
   inputA.setAttribute('aria-label', 'Comparison URL A');
   inputA.value = pageCompareState.urlA || pageCompareCurrentUrl();
+  inputA.disabled = pageCompareState.loadingMode === 'url';
   toolbar.appendChild(inputA);
 
   const inputB = document.createElement('input');
@@ -254,15 +291,20 @@ function appendUrlCompareControls(cardNode) {
   inputB.placeholder = 'https://example.com/page-b';
   inputB.setAttribute('aria-label', 'Comparison URL B');
   inputB.value = pageCompareState.urlB;
+  inputB.disabled = pageCompareState.loadingMode === 'url';
   toolbar.appendChild(inputB);
 
-  const compareButton = el('button', '', pageCompareState.loading ? 'Fetching…' : 'Compare URLs');
+  const isUrlLoading = pageCompareState.loading && pageCompareState.loadingMode === 'url';
+  const compareButton = el('button', '', isUrlLoading ? 'Cancel URL comparison' : 'Compare URLs');
   compareButton.type = 'button';
-  compareButton.disabled = pageCompareState.loading;
-  compareButton.addEventListener('click', () => runUrlComparison(inputA.value, inputB.value).catch(() => {}));
+  compareButton.disabled = pageCompareState.loading && !isUrlLoading;
+  compareButton.addEventListener('click', () => {
+    if (isUrlLoading) cancelUrlComparison().catch(() => {});
+    else runUrlComparison(inputA.value, inputB.value).catch(() => {});
+  });
   toolbar.appendChild(compareButton);
   cardNode.appendChild(toolbar);
-  cardNode.appendChild(el('div', 'muted', 'Explicit raw-HTML comparison · max 2 MiB per URL · 12-second timeout · credentials omitted · no referrer. Redirect final URLs and HTTP error pages are retained for comparison.'));
+  cardNode.appendChild(el('div', 'muted', 'Explicit raw-HTML comparison · max 2 MiB per URL · 12-second per-request timeout · 15-second scan timeout · cancellable · credentials omitted · no referrer. Redirect final URLs and HTTP error pages are retained for comparison.'));
 }
 
 function appendPageCompareResult(panel) {
@@ -271,7 +313,7 @@ function appendPageCompareResult(panel) {
   cardNode.appendChild(el('div', 'card-header', 'Page comparison result'));
 
   if (pageCompareState.error) {
-    const issue = el('div', 'issue critical');
+    const issue = el('div', pageCompareState.error.includes('cancelled') ? 'issue info' : 'issue critical');
     issue.appendChild(el('div', 'issue-message', pageCompareState.error));
     cardNode.appendChild(issue);
   }

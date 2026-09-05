@@ -58,7 +58,7 @@ Because checking a URL necessarily contacts that URL's server, the remote server
 
 ### Link checks
 
-Link status checks use `HEAD`, are capped at 250 unique HTTP/HTTPS URLs, use at most six concurrent requests, have a 10-second per-request timeout and a 30-second total scan timeout, and can be cancelled. Partial results remain visible after cancellation or timeout.
+Link status checks use `HEAD`, are capped at 250 unique HTTP/HTTPS URLs, use at most six concurrent requests, have a 10-second per-request timeout and a 30-second total scan timeout, and can be cancelled. Partial results remain visible after cancellation or timeout. Legacy link-check routing uses the same scan timeout/cancellation semantics so an older UI path cannot fan out indefinitely.
 
 ### Image checks
 
@@ -70,7 +70,7 @@ Canonical-chain and hreflang target checks fetch only the target HTML needed for
 
 ### Sitemap checks
 
-Sitemap checks fetch and parse sitemap XML locally. Sitemap traversal is bounded by document count, per-document bytes, total decoded bytes, concurrency, request timeout, and total scan timeout, and can be cancelled.
+Sitemap checks fetch and parse sitemap XML locally. Sitemap traversal is bounded by document count, per-document bytes, total decoded bytes, concurrency, request timeout, and total scan timeout, and can be cancelled. Cancellation and timeout are reported separately so a user cancellation is not presented as a network timeout.
 
 ### robots.txt
 
@@ -80,7 +80,7 @@ Sitemap checks fetch and parse sitemap XML locally. Sitemap traversal is bounded
 
 **Current tab vs another open tab** uses the extension's already-injected content script to analyze the rendered DOM in the selected open HTTP/HTTPS tab. It does not issue an additional page request solely for that comparison.
 
-**URL A vs URL B** is an explicit on-demand raw-HTML comparison. Each URL is fetched with credentials omitted and no referrer, with redirects followed, a 12-second request timeout, and a 2 MiB HTML response limit per URL. Non-HTML responses are rejected. HTML error responses such as 404 or 500 pages may still be analyzed so their actual SEO state can be compared. Returned HTML is parsed locally and fetched page scripts are not executed by the comparison parser.
+**URL A vs URL B** is an explicit on-demand raw-HTML comparison. Each URL is fetched with credentials omitted and no referrer, with redirects followed, a 12-second per-request timeout, and a 2 MiB HTML response limit per URL. The two requests share one comparison operation with a 15-second total scan timeout and a visible Cancel control; cancelling it aborts both in-flight requests. Non-HTML responses are rejected. HTML error responses such as 404 or 500 pages may still be analyzed so their actual SEO state can be compared. Returned HTML is parsed locally and fetched page scripts are not executed by the comparison parser.
 
 When local domain profiles exist, each compared final URL resolves its own exact-hostname profile locally before the audit is evaluated. Profile lookup does not issue a network request and does not expose the stored profile to the compared site.
 
@@ -113,3 +113,5 @@ The result contains a primary heuristic type, confidence, optional faceted/pagin
 ## Raw HTML comparison
 
 **Compare raw HTML** is a separate explicit exception to the credential-free external-check policy. It performs a GET of the current page using the current page's browser credentials so authenticated source is comparable with the rendered page. It does not fetch an unrelated target, runs only when the user asks for the comparison, and the returned HTML remains local to the browser extension.
+
+The authenticated raw-source request is capped at 2 MiB, has a 12-second timeout, rejects non-HTML responses, and has an explicit Cancel control in the Content and Compare workflows. The operation is pinned to the tab and page URL that started it; a late response from an older tab is ignored rather than being applied to a newer inspected page. Cancelling aborts the in-flight fetch in that originating tab. No raw HTML is persisted automatically or uploaded.

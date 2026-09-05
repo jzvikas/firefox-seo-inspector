@@ -352,24 +352,20 @@ function appendSnapshotDiff(panel) {
 function appendRawCompare(panel) {
   const rawCard = el('div', 'card');
   rawCard.appendChild(el('div', 'card-header', 'Rendered DOM vs raw HTML'));
-  const rawButton = el('button', '', 'Compare raw HTML');
+  const toolbar = el('div', 'toolbar');
+  const rawButton = el('button', '', rawSourceUiState.loading ? 'Cancel raw HTML' : state.rawReport ? 'Refresh raw HTML' : 'Compare raw HTML');
   rawButton.type = 'button';
-  rawButton.addEventListener('click', async () => {
-    rawButton.disabled = true;
-    rawButton.textContent = 'Fetching…';
-    try {
-      state.rawReport = await sendToTab({ type: 'seoInspector.fetchRaw' });
-      state.rawDiff = SeoCore.diffPageFacts(state.report.facts, state.rawReport.facts);
-    } catch (_error) {
-      state.rawDiff = null;
-    }
-    renderCompare();
+  rawButton.addEventListener('click', () => {
+    if (rawSourceUiState.loading) cancelRawSourceFetch().catch(() => {});
+    else runRawSourceFetch().catch(() => {});
   });
-  rawCard.appendChild(rawButton);
-  if (state.rawDiff === null) rawCard.appendChild(el('div', 'empty', 'Raw fetch failed or has not been run.'));
+  toolbar.appendChild(rawButton);
+  rawCard.appendChild(toolbar);
+  appendRawSourceStatus(rawCard);
+  if (state.rawDiff === null) rawCard.appendChild(el('div', 'empty', rawSourceUiState.error ? 'Raw comparison is unavailable.' : 'Raw fetch failed or has not been run.'));
   else if (Array.isArray(state.rawDiff) && !state.rawDiff.length) rawCard.appendChild(el('div', 'empty', 'No differences in the compared SEO fields.'));
   else if (state.rawDiff) state.rawDiff.forEach((item) => addRow(rawCard, item.field, `Rendered: ${valueText(item.rendered)} | Raw: ${valueText(item.raw)}`));
-  else rawCard.appendChild(el('div', 'empty', 'Run raw HTML comparison when needed.'));
+  else if (!rawSourceUiState.loading) rawCard.appendChild(el('div', 'empty', 'Run raw HTML comparison when needed.'));
   panel.appendChild(rawCard);
 }
 
