@@ -173,10 +173,65 @@
       descriptionMin: normalized.thresholds.descriptionMin,
       descriptionMax: normalized.thresholds.descriptionMax,
       oversizedImageRatio: normalized.thresholds.oversizedImageRatio,
-      required: normalized.required,
-      disabledChecks: normalized.disabledChecks,
-      severityOverrides: normalized.severityOverrides,
     };
+  }
+
+  function policyIssue(id, severity, category, title, message) {
+    return { id, severity, category, title, message, refs: [] };
+  }
+
+  function scoreIssues(issues) {
+    let score = 100;
+    (issues || []).forEach((item) => {
+      if (item.severity === 'critical') score -= 20;
+      else if (item.severity === 'warning') score -= 5;
+    });
+    return Math.max(0, Math.min(100, score));
+  }
+
+  function severityCounts(issues) {
+    const counts = { critical: 0, warning: 0, info: 0 };
+    (issues || []).forEach((item) => {
+      if (Object.prototype.hasOwnProperty.call(counts, item.severity)) counts[item.severity] += 1;
+    });
+    return counts;
+  }
+
+  function applyEvaluation(evaluation, facts, config) {
+    const normalized = normalize(config);
+    const source = evaluation && typeof evaluation === 'object' ? evaluation : {};
+    const pageFacts = facts && typeof facts === 'object' ? facts : {};
+    const suppressMissing = new Set();
+    if (!normalized.required.title) suppressMissing.add('title.missing');
+    if (!normalized.required.description) suppressMissing.add('description.missing');
+    if (!normalized.required.canonical) suppressMissing.add('canonical.missing');
+    if (!normalized.required.h1) suppressMissing.add('headings.h1.missing');
+
+    let issues = (Array.isArray(source.issues) ? source.issues : []).filter((item) => !suppressMissing.has(item.id));
+    const existing = new Set(issues.map((item) => item.id));
+    const schemas = Array.isArray(pageFacts.schemas) ? pageFacts.schemas : [];
+    const hasValidSchema = schemas.some((item) => item && item.valid !== false && Array.isArray(item.types) && item.types.length);
+    const hreflang = Array.isArray(pageFacts.hreflang) ? pageFacts.hreflang : [];
+
+    if (normalized.required.schema && !hasValidSchema && !existing.has('schema.required')) {
+      issues.push(policyIssue('schema.required', 'warning', 'Structured data', 'Structured data is required', 'No valid typed structured-data block was found.'));
+    }
+    if (normalized.required.hreflang && !hreflang.length && !existing.has('hreflang.required')) {
+      issues.push(policyIssue('hreflang.required', 'warning', 'International', 'Hreflang is required', 'No hreflang declaration was found.'));
+    }
+    let protocol = '';
+    try { protocol = new URL(pageFacts.url || '').protocol; } catch (_error) {}
+    if (normalized.required.https && protocol !== 'https:' && !existing.has('https.required')) {
+      issues.push(policyIssue('https.required', 'critical', 'HTTP', 'HTTPS is required', 'The audited page URL does not use HTTPS.'));
+    }
+
+    issues = applyIssuePolicy(issues, normalized);
+    return Object.assign({}, source, {
+      issues,
+      score: scoreIssues(issues),
+      severityCounts: severityCounts(issues),
+      rulesVersion: normalized.version,
+    });
   }
 
   function imageSizeIssue(analysis, config) {
@@ -208,6 +263,9 @@
     severityFor,
     applyIssuePolicy,
     toSeoCoreOptions,
+    applyEvaluation,
+    scoreIssues,
+    severityCounts,
     imageSizeIssue,
   };
 });
