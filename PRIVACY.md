@@ -79,6 +79,12 @@ The crawler is capped at 250 URLs, depth 3, and six concurrent requests. URL nor
 
 Crawler rows, duplicate-title/description/H1 summaries, and discovered-link state remain in sidebar memory. They are not persisted or uploaded automatically. CSV/JSON files are created only when the user explicitly exports them. See [CRAWLER_LITE.md](CRAWLER_LITE.md).
 
+## Page-type detection
+
+Page-type detection itself performs no network request and stores no new persistent browsing record. It evaluates technical facts already available to the current audit: the inspected URL, already-known main-document status, structured-data/Open Graph facts, and a small platform-neutral set of DOM signals such as semantic article/search elements, schema.org microdata, and `rel=next` / `rel=prev`.
+
+The result contains a primary heuristic type, confidence, optional faceted/pagination traits, and a bounded evidence list. It is kept inside the current audit/report and is reused by Multi-tab and Crawler Lite summaries. CSV/JSON exports include that result only when the user explicitly exports those reports. Page-type detection adds no browser permission and does not contact a classification service. See [PAGE_TYPE.md](PAGE_TYPE.md).
+
 ## Raw HTML comparison
 
 **Compare raw HTML** is a separate explicit exception to the credential-free external-check policy. It performs a GET of the current page using the current page's browser credentials so authenticated source is comparable with the rendered page. It does not fetch an unrelated target, runs only when the user asks for the comparison, and the returned HTML remains local to the browser extension.
