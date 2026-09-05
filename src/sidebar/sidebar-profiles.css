@@ -1,0 +1,42 @@
+.rules-label > textarea {
+  grid-column: 2;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 68px;
+  resize: vertical;
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.35));
+  border-radius: 6px;
+  background: Canvas;
+  color: CanvasText;
+  padding: 6px;
+  font: inherit;
+}
+
+.rules-profile-ignore {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.2));
+}
+
+.rules-profile-ignore:last-child {
+  border-bottom: 0;
+}
+
+.profile-saved-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.2));
+  overflow-wrap: anywhere;
+}
+
+.profile-saved-row:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 360px) {
+  .rules-label > textarea {
+    grid-column: 1;
+  }
+}
