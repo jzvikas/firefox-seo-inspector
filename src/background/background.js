@@ -4,6 +4,7 @@ const RESPONSE_KEY_PREFIX = 'response-meta:';
 const LINK_CHECK_LIMIT = 250;
 const LINK_CHECK_CONCURRENCY = 6;
 const LINK_CHECK_TIMEOUT_MS = 10000;
+const navigationRequests = new Map();
 
 function selectedHeaders(headers) {
   const wanted = new Set(['x-robots-tag', 'content-type', 'content-language', 'link', 'cache-control']);
@@ -17,12 +18,47 @@ function selectedHeaders(headers) {
   return output;
 }
 
+browser.webRequest.onBeforeRequest.addListener(
+  (details) => {
+    if (details.tabId < 0 || details.type !== 'main_frame') return;
+    if (!navigationRequests.has(details.requestId)) {
+      navigationRequests.set(details.requestId, {
+        tabId: details.tabId,
+        initialUrl: details.url,
+        redirects: [],
+      });
+    }
+  },
+  { urls: ['http://*/*', 'https://*/*'], types: ['main_frame'] },
+);
+
+browser.webRequest.onBeforeRedirect.addListener(
+  (details) => {
+    if (details.tabId < 0 || details.type !== 'main_frame') return;
+    let navigation = navigationRequests.get(details.requestId);
+    if (!navigation) {
+      navigation = { tabId: details.tabId, initialUrl: details.url, redirects: [] };
+      navigationRequests.set(details.requestId, navigation);
+    }
+    navigation.redirects.push({
+      from: details.url,
+      to: details.redirectUrl,
+      statusCode: details.statusCode,
+      statusLine: details.statusLine || '',
+    });
+  },
+  { urls: ['http://*/*', 'https://*/*'], types: ['main_frame'] },
+);
+
 browser.webRequest.onHeadersReceived.addListener(
   (details) => {
     if (details.tabId < 0 || details.type !== 'main_frame') return;
     const headers = selectedHeaders(details.responseHeaders);
+    const navigation = navigationRequests.get(details.requestId);
     const value = {
       url: details.url,
+      initialUrl: navigation ? navigation.initialUrl : details.url,
+      redirectChain: navigation ? navigation.redirects.slice() : [],
       statusCode: details.statusCode,
       statusLine: details.statusLine || '',
       xRobotsTag: headers['x-robots-tag'] || [],
@@ -38,8 +74,18 @@ browser.webRequest.onHeadersReceived.addListener(
   ['responseHeaders'],
 );
 
+function clearNavigation(details) {
+  if (details && details.requestId) navigationRequests.delete(details.requestId);
+}
+
+browser.webRequest.onCompleted.addListener(clearNavigation, { urls: ['http://*/*', 'https://*/*'], types: ['main_frame'] });
+browser.webRequest.onErrorOccurred.addListener(clearNavigation, { urls: ['http://*/*', 'https://*/*'], types: ['main_frame'] });
+
 browser.tabs.onRemoved.addListener((tabId) => {
   browser.storage.session.remove(`${RESPONSE_KEY_PREFIX}${tabId}`).catch(() => {});
+  for (const [requestId, value] of navigationRequests.entries()) {
+    if (value.tabId === tabId) navigationRequests.delete(requestId);
+  }
 });
 
 browser.action.onClicked.addListener(() => {
@@ -125,9 +171,16 @@ async function checkLinks(values) {
   return { results, checked: unique.length, capped };
 }
 
+async function checkTarget(value) {
+  const url = sanitizeHttpUrl(value);
+  if (!url) return { url: value || '', status: 0, statusText: '', redirected: false, finalUrl: value || '', error: 'invalid-url' };
+  return checkOneLink(url);
+}
+
 browser.runtime.onMessage.addListener((message, sender) => {
   if (!message || typeof message !== 'object') return undefined;
   if (message.type === 'seoInspector.getResponseMeta') return responseMetaForSender(sender);
   if (message.type === 'seoInspector.checkLinks') return checkLinks(message.urls);
+  if (message.type === 'seoInspector.checkTarget') return checkTarget(message.url);
   return undefined;
 });
