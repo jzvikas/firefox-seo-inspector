@@ -18,6 +18,8 @@
   ],
   "background": {
     "scripts": [
+      "lib/robots.js",
+      "lib/sitemap.js",
       "background/background.js"
     ]
   },
