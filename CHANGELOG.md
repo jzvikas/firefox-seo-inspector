@@ -6,6 +6,7 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Inspector rendering is now panel-lazy: startup renders only the active panel, inactive panels stay dirty until opened, and Rules/Profiles defer local-storage reads until their panels are first rendered while per-panel error isolation and retry behavior remain intact.
 - Authenticated same-page **Compare raw HTML** requests are now capped at 2 MiB, limited to 12 seconds, explicitly cancellable from Content and Compare, and pinned to the originating tab/page so a late response cannot overwrite a newer inspected page.
 - Explicit URL A vs URL B comparison now runs both credential-free requests under one cancellable operation with the existing 2 MiB/12-second per-URL bounds plus a 15-second total scan timeout and a visible Cancel control.
 - Network-cancellation regression coverage verifies aggregate URL-comparison aborts, raw-source byte/time/cancel wiring, and legacy link/sitemap scan timeout semantics.
