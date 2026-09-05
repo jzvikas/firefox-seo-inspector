@@ -30,6 +30,9 @@ All notable changes to this project are documented here.
 - Dual-target sitemap membership scanning for both the current source URL and its canonical URL in one bounded, cancellable sitemap-index traversal.
 - Sitemap conflict diagnostics for source URLs that are present while non-canonical, redirecting, noindex/robots-blocked, or returning HTTP errors, with separate source/canonical sitemap and `lastmod` reporting.
 - Automated tests for sitemap target normalization, self-canonical deduplication, healthy membership, non-canonical/redirect/noindex/blocked/error conflicts, and false-positive prevention.
+- Cancellable bounded link-status checking with a 250-URL cap, six concurrent requests, per-request timeout, total scan timeout, and credential-free/no-referrer requests.
+- Explicit internal-link-to-redirect detection and summary counts in the Links panel, with partial results retained when a scan is cancelled or times out.
+- Automated tests for link URL normalization/deduplication/caps, HTTP state classification, result mapping, internal redirect counting, and network-failure handling.
 
 ## [0.1.0] - 2026-09-05
 
