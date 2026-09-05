@@ -146,6 +146,95 @@ function refreshSafely(scope) {
     .catch((error) => handleAsyncUiFailure(scope || 'refresh', error));
 }
 
+function cancelBackgroundOperation(type, operationId) {
+  if (!operationId) return;
+  browser.runtime.sendMessage({ type, operationId: String(operationId) }).catch(() => {});
+}
+
+function releasePageScopedState() {
+  if (typeof linkCheckState !== 'undefined' && linkCheckState) {
+    cancelBackgroundOperation('seoInspector.cancelLinks', linkCheckState.operationId);
+    linkCheckState.pageUrl = '';
+    linkCheckState.checking = false;
+    linkCheckState.operationId = null;
+    linkCheckState.report = null;
+    linkCheckState.error = null;
+    linkCheckState.progressChecked = 0;
+    linkCheckState.progressRequested = 0;
+    if (typeof LINK_RENDER_BATCH !== 'undefined') linkCheckState.visibleLimit = LINK_RENDER_BATCH;
+  }
+
+  if (typeof imageNetworkState !== 'undefined' && imageNetworkState) {
+    cancelBackgroundOperation('seoInspector.cancelImages', imageNetworkState.operationId);
+    if (typeof resetImageNetworkState === 'function') resetImageNetworkState('');
+  }
+
+  if (typeof hreflangState !== 'undefined' && hreflangState) {
+    cancelBackgroundOperation('seoInspector.cancelHreflang', hreflangState.operationId);
+    if (typeof resetHreflangState === 'function') resetHreflangState('');
+  }
+
+  if (typeof categoryPaginationNetworkState !== 'undefined' && categoryPaginationNetworkState) {
+    cancelBackgroundOperation('seoInspector.cancelLinks', categoryPaginationNetworkState.operationId);
+    categoryPaginationNetworkState.pageUrl = '';
+    categoryPaginationNetworkState.checking = false;
+    categoryPaginationNetworkState.operationId = '';
+    categoryPaginationNetworkState.checked = 0;
+    categoryPaginationNetworkState.requested = 0;
+    categoryPaginationNetworkState.results = new Map();
+    categoryPaginationNetworkState.report = null;
+    categoryPaginationNetworkState.error = '';
+  }
+
+  if (typeof canonicalChainState !== 'undefined' && canonicalChainState) {
+    cancelBackgroundOperation('seoInspector.cancelCanonicalChain', canonicalChainState.operationId);
+    canonicalChainState.pageUrl = '';
+    canonicalChainState.canonicalUrl = '';
+    canonicalChainState.report = null;
+    canonicalChainState.checking = false;
+    canonicalChainState.operationId = null;
+    canonicalChainState.error = null;
+  }
+
+  if (typeof sitemapMembershipState !== 'undefined' && sitemapMembershipState) {
+    cancelBackgroundOperation('seoInspector.cancelSitemapMembership', sitemapMembershipState.operationId);
+    sitemapMembershipState.pageUrl = '';
+    sitemapMembershipState.canonicalUrl = '';
+    sitemapMembershipState.report = null;
+    sitemapMembershipState.checking = false;
+    sitemapMembershipState.operationId = null;
+    sitemapMembershipState.error = null;
+  }
+
+  if (typeof rawSourceUiState !== 'undefined' && rawSourceUiState) {
+    const rawOperationId = rawSourceUiState.operationId;
+    const rawTabId = rawSourceUiState.tabId;
+    if (rawOperationId && typeof rawTabId === 'number') {
+      browser.tabs.sendMessage(rawTabId, { type: 'seoInspector.cancelRaw', operationId: rawOperationId }).catch(() => {});
+    }
+    rawSourceUiState.loading = false;
+    rawSourceUiState.operationId = '';
+    rawSourceUiState.tabId = null;
+    rawSourceUiState.pageUrl = '';
+    rawSourceUiState.error = '';
+  }
+
+  if (typeof pageCompareState !== 'undefined' && pageCompareState) {
+    if (pageCompareState.loadingMode === 'url') {
+      cancelBackgroundOperation('seoInspector.cancelComparePages', pageCompareState.operationId);
+    }
+    pageCompareState.loading = false;
+    pageCompareState.loadingMode = '';
+    pageCompareState.operationId = '';
+    if (pageCompareState.mode === 'tab') {
+      pageCompareState.result = null;
+      pageCompareState.leftLabel = '';
+      pageCompareState.rightLabel = '';
+      pageCompareState.mode = '';
+    }
+  }
+}
+
 document.querySelectorAll('.tab').forEach((button) => button.addEventListener('click', () => activateTab(button.dataset.tab)));
 document.getElementById('refreshButton').addEventListener('click', () => { refreshSafely('refresh-button'); });
 
@@ -175,6 +264,14 @@ browser.tabs.onActivated.addListener(() => { refreshSafely('tab-activated'); });
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (tabId === state.tabId && (changeInfo.status === 'complete' || changeInfo.url)) refreshSafely('tab-updated');
 });
+browser.tabs.onRemoved.addListener((tabId) => {
+  if (tabId !== state.tabId) return;
+  releasePageScopedState();
+  state.report = null;
+  state.tabId = null;
+  markAllPanelsDirty();
+  refreshSafely('tab-removed');
+});
 
 browser.runtime.onMessage.addListener((message, sender) => {
   if (message && message.type === 'seoInspector.pageChanged' && sender && sender.tab && sender.tab.id === state.tabId) {
@@ -193,6 +290,7 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 window.addEventListener('unload', () => {
+  releasePageScopedState();
   if (typeof state.tabId === 'number') browser.tabs.sendMessage(state.tabId, { type: 'seoInspector.watch', enabled: false }).catch(() => {});
   if (typeof crawlerState !== 'undefined' && crawlerState && crawlerState.running) {
     browser.runtime.sendMessage({ type: 'seoInspector.crawler.cancel', scanId: String(crawlerState.scanId) }).catch(() => {});
