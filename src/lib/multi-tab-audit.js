@@ -55,6 +55,17 @@
     return INDEXABILITY_VALUES.has(raw) ? raw : 'Unknown';
   }
 
+  function pageTypeSummary(report) {
+    const value = report && report.pageType ? report.pageType : {};
+    const traits = value.traits || {};
+    return {
+      pageType: cleanText(value.label || value.primary, 80),
+      pageTypePrimary: cleanText(value.primary, 40),
+      pageTypeConfidence: cleanText(value.confidence, 20),
+      pageTraits: [traits.faceted ? 'Faceted' : '', traits.pagination ? 'Pagination' : ''].filter(Boolean).join(' · '),
+    };
+  }
+
   function summarizeReport(tab, report) {
     const facts = report && report.facts ? report.facts : {};
     const evaluation = report && report.evaluation ? report.evaluation : {};
@@ -62,7 +73,7 @@
     const issues = Array.isArray(evaluation.issues) ? evaluation.issues : [];
     const severity = evaluation.severityCounts || {};
     const url = isHttpUrl(facts.url) ? String(facts.url) : String(tab && tab.url || '');
-    return {
+    return Object.assign({
       tabId: Number(tab && tab.id) || 0,
       windowId: Number(tab && tab.windowId) || 0,
       available: true,
@@ -84,7 +95,7 @@
       duplicateTitle: false,
       duplicateDescription: false,
       duplicateH1: false,
-    };
+    }, pageTypeSummary(report));
   }
 
   function unavailableRow(tab, reason) {
@@ -96,6 +107,7 @@
       url: String(tab && tab.url || ''),
       tabTitle: cleanText(tab && tab.title, 200),
       title: '', description: '', h1: '', h1Count: 0, canonical: '', robots: '',
+      pageType: '', pageTypePrimary: '', pageTypeConfidence: '', pageTraits: '',
       indexability: 'Unknown', statusCode: 0, score: null, critical: 0, warnings: 0, issueCount: 0,
       duplicateTitle: false, duplicateDescription: false, duplicateH1: false,
     };
@@ -141,7 +153,7 @@
   }
 
   function sortRows(rows, key, direction) {
-    const allowed = new Set(['url', 'title', 'statusCode', 'indexability', 'score', 'issueCount', 'critical', 'warnings', 'h1']);
+    const allowed = new Set(['url', 'title', 'pageType', 'statusCode', 'indexability', 'score', 'issueCount', 'critical', 'warnings', 'h1']);
     const field = allowed.has(key) ? key : 'url';
     const dir = direction === 'desc' ? -1 : 1;
     return (Array.isArray(rows) ? rows : []).slice().sort((a, b) => {
@@ -163,7 +175,7 @@
       if (opts.duplicatesOnly && !(row.duplicateTitle || row.duplicateDescription || row.duplicateH1)) return false;
       if (indexability && indexability !== 'All' && row.indexability !== indexability) return false;
       if (query) {
-        const haystack = [row.url, row.title, row.description, row.h1, row.canonical, row.robots, row.tabTitle].join('\n').toLocaleLowerCase();
+        const haystack = [row.url, row.title, row.description, row.h1, row.canonical, row.robots, row.tabTitle, row.pageType, row.pageTraits].join('\n').toLocaleLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
@@ -177,7 +189,8 @@
 
   function toCsv(rows) {
     const columns = [
-      ['url', 'URL'], ['statusCode', 'Status'], ['title', 'Title'], ['description', 'Description'], ['h1', 'H1'], ['h1Count', 'H1 count'],
+      ['url', 'URL'], ['statusCode', 'Status'], ['pageType', 'Page type'], ['pageTypeConfidence', 'Page type confidence'], ['pageTraits', 'Page traits'],
+      ['title', 'Title'], ['description', 'Description'], ['h1', 'H1'], ['h1Count', 'H1 count'],
       ['canonical', 'Canonical'], ['robots', 'Robots'], ['indexability', 'Indexability'], ['score', 'Score'], ['critical', 'Critical'], ['warnings', 'Warnings'],
       ['issueCount', 'Issues'], ['duplicateTitle', 'Duplicate title'], ['duplicateDescription', 'Duplicate description'], ['duplicateH1', 'Duplicate H1'], ['available', 'Available'], ['error', 'Error'],
     ];

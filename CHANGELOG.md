@@ -6,6 +6,13 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Toolbar activation now opens Firefox SEO Inspector in a separate movable and resizable browser window instead of shrinking the inspected page with a sidebar. Reopening the toolbar action focuses the existing Inspector window rather than creating duplicates, and the detached window follows the active normal browser tab while ignoring its own extension tab.
+- Generated release artifacts now use the neutral `seo-inspector-<version>.xpi` / `.xpi.sha256` filenames; older `firefox-seo-inspector-*` build artifacts are removed automatically during deterministic builds.
+- Platform-neutral local page-type detection for Homepage, Product, Category/listing, Article/blog, Search results, CMS/generic content, and 404/error pages, with independent Faceted/filter and Pagination traits.
+- Explainable page-type confidence and bounded evidence based on already-available HTTP status, URL shape, JSON-LD/Open Graph/microdata, semantic article/search controls, and pagination signals; detection itself performs no network request.
+- Dedicated Page type card in Overview plus page-type data in rendered/raw URL reports, explicit URL comparison parsing, Multi-tab summaries, and Crawler Lite summaries.
+- Multi-tab and Crawler Lite search/sort and CSV/JSON exports now retain page type, confidence, and page traits.
+- Automated page-type precedence/heuristic tests, platform-neutral DOM-signal tests, dependency-order checks, fetched-page/domain-profile runtime coverage, and sidebar Overview/Tabs/Crawler VM smoke tests.
 - Dedicated **Crawler** panel for explicit bounded local crawling from the current page or a user-entered HTTP/HTTPS seed URL.
 - Same-host restriction by default, configurable crawl caps up to 250 URLs and depth 3, URL normalization/deduplication, six concurrent requests, live progress, Pause/Resume, and scan-level cancellation that aborts in-flight requests.
 - Credential-free/no-referrer crawler GET requests with redirect following, a 12-second per-request timeout, 2 MiB HTML response limit, non-HTML rejection, and local parsing without executing fetched scripts.

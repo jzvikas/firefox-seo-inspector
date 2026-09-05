@@ -7,7 +7,7 @@ const { execFileSync } = require('node:child_process');
 function runBuild() {
   execFileSync(process.execPath, ['scripts/build.mjs'], { stdio: 'pipe' });
   const manifest = JSON.parse(fs.readFileSync('src/manifest.json', 'utf8'));
-  const path = `dist/firefox-seo-inspector-${manifest.version}.xpi`;
+  const path = `dist/seo-inspector-${manifest.version}.xpi`;
   const data = fs.readFileSync(path);
   return { data, hash: crypto.createHash('sha256').update(data).digest('hex') };
 }
@@ -24,6 +24,15 @@ function zipMethods(buffer) {
   }
   return methods;
 }
+
+test('XPI build uses a neutral artifact filename', () => {
+  const manifest = JSON.parse(fs.readFileSync('src/manifest.json', 'utf8'));
+  runBuild();
+  assert.equal(fs.existsSync(`dist/seo-inspector-${manifest.version}.xpi`), true);
+  assert.equal(fs.existsSync(`dist/seo-inspector-${manifest.version}.xpi.sha256`), true);
+  assert.equal(fs.existsSync(`dist/firefox-seo-inspector-${manifest.version}.xpi`), false);
+  assert.equal(fs.existsSync(`dist/firefox-seo-inspector-${manifest.version}.xpi.sha256`), false);
+});
 
 test('XPI build is bit-for-bit reproducible on repeated runs', () => {
   const first = runBuild();

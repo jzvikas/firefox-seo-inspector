@@ -33,8 +33,14 @@ function evaluateWithAuditPolicy(facts, responseMeta, policy) {
   return evaluation;
 }
 
+function detectPageType(doc, facts, responseMeta) {
+  facts.pageSignals = PageTypeDom.collect(doc, facts && facts.url);
+  return PageType.detect(facts, responseMeta || null);
+}
+
 async function analyzeDocument(doc, locationLike, responseMeta, securityResponseMeta, auditPolicy) {
   const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
+  const pageType = detectPageType(doc, facts, responseMeta);
   const policy = auditPolicy || await loadAuditPolicy(facts.url);
   const rulesConfig = CustomRules.normalize(policy.rules);
   const evaluation = evaluateWithAuditPolicy(facts, responseMeta || null, policy);
@@ -63,6 +69,7 @@ async function analyzeDocument(doc, locationLike, responseMeta, securityResponse
   return {
     facts,
     evaluation,
+    pageType,
     responseMeta: responseMeta || null,
     securityResponseMeta: securityResponseMeta || null,
     customRules: rulesConfig,
@@ -143,6 +150,7 @@ async function fetchRawReport() {
     redirectChain: [],
   };
   const facts = PageExtractor.extract(rawDocument, rawUrl, { performance: null });
+  const pageType = detectPageType(rawDocument, facts, responseMeta);
   const auditPolicy = await loadAuditPolicy(rawUrl.href);
   const evaluation = evaluateWithAuditPolicy(facts, responseMeta, auditPolicy);
   const contentAudit = ContentAudit.collect(rawDocument, {
@@ -153,6 +161,7 @@ async function fetchRawReport() {
   return {
     facts,
     evaluation,
+    pageType,
     responseMeta,
     customRules: CustomRules.normalize(auditPolicy.rules),
     domainProfile: auditPolicy.profile ? DomainProfiles.profileSummary(auditPolicy.profile) : null,

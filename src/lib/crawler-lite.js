@@ -98,6 +98,17 @@
     return text(report && report.evaluation && report.evaluation.indexability && report.evaluation.indexability.verdict, 40) || 'Unknown';
   }
 
+  function pageTypeSummary(report) {
+    const value = report && report.pageType ? report.pageType : {};
+    const traits = value.traits || {};
+    return {
+      pageType: text(value.label || value.primary, 80),
+      pageTypePrimary: text(value.primary, 40),
+      pageTypeConfidence: text(value.confidence, 20),
+      pageTraits: [traits.faceted ? 'Faceted' : '', traits.pagination ? 'Pagination' : ''].filter(Boolean).join(' · '),
+    };
+  }
+
   function summarize(resource, report, depth, sourceUrl) {
     const facts = report && report.facts ? report.facts : {};
     const evaluation = report && report.evaluation ? report.evaluation : {};
@@ -106,7 +117,7 @@
     const counts = evaluation.severityCounts || {};
     const requestedUrl = normalizeUrl(resource && resource.requestedUrl) || normalizeUrl(facts.url);
     const finalUrl = normalizeUrl(resource && resource.url) || normalizeUrl(facts.url) || requestedUrl;
-    return {
+    return Object.assign({
       depth: clampInteger(depth, 0, 0, MAX_DEPTH),
       sourceUrl: normalizeUrl(sourceUrl) || '',
       requestedUrl,
@@ -129,7 +140,7 @@
       duplicateTitle: false,
       duplicateDescription: false,
       duplicateH1: false,
-    };
+    }, pageTypeSummary(report));
   }
 
   function errorRow(url, depth, sourceUrl, resource) {
@@ -145,6 +156,7 @@
       available: false,
       error: text(resource && resource.error || 'network', 100),
       title: '', description: '', h1: '', canonical: '', robots: '', indexability: 'Unknown', score: null,
+      pageType: '', pageTypePrimary: '', pageTypeConfidence: '', pageTraits: '',
       critical: 0, warnings: 0, issueCount: 0, linkCount: 0,
       duplicateTitle: false, duplicateDescription: false, duplicateH1: false,
     };
@@ -189,7 +201,7 @@
       if (options.duplicatesOnly && !(row.duplicateTitle || row.duplicateDescription || row.duplicateH1)) return false;
       if (options.issuesOnly && !(row.issueCount > 0)) return false;
       if (query) {
-        const haystack = [row.url, row.title, row.description, row.h1, row.canonical, row.robots].join('\n').toLocaleLowerCase();
+        const haystack = [row.url, row.title, row.description, row.h1, row.canonical, row.robots, row.pageType, row.pageTraits].join('\n').toLocaleLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
@@ -197,7 +209,7 @@
   }
 
   function sortRows(rows, key, direction) {
-    const allowed = new Set(['depth', 'url', 'statusCode', 'title', 'h1', 'indexability', 'score', 'issueCount']);
+    const allowed = new Set(['depth', 'url', 'pageType', 'statusCode', 'title', 'h1', 'indexability', 'score', 'issueCount']);
     const field = allowed.has(key) ? key : 'depth';
     const dir = direction === 'desc' ? -1 : 1;
     return (Array.isArray(rows) ? rows : []).slice().sort((a, b) => {
@@ -222,6 +234,7 @@
   function toCsv(rows) {
     const columns = [
       ['depth', 'Depth'], ['requestedUrl', 'Requested URL'], ['url', 'Final URL'], ['statusCode', 'Status'], ['redirected', 'Redirected'],
+      ['pageType', 'Page type'], ['pageTypeConfidence', 'Page type confidence'], ['pageTraits', 'Page traits'],
       ['title', 'Title'], ['description', 'Description'], ['h1', 'H1'], ['canonical', 'Canonical'], ['robots', 'Robots'], ['indexability', 'Indexability'],
       ['score', 'Score'], ['critical', 'Critical'], ['warnings', 'Warnings'], ['issueCount', 'Issues'], ['linkCount', 'Links'],
       ['duplicateTitle', 'Duplicate title'], ['duplicateDescription', 'Duplicate description'], ['duplicateH1', 'Duplicate H1'], ['sourceUrl', 'Discovered from'], ['error', 'Error'],

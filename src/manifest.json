@@ -18,6 +18,7 @@
   ],
   "background": {
     "scripts": [
+      "background/window-background.js",
       "lib/robots.js",
       "lib/sitemap.js",
       "lib/head-signals.js",
@@ -37,14 +38,9 @@
     ]
   },
   "action": {
-    "default_title": "Open Firefox SEO Inspector",
-    "default_icon": "icons/icon.svg"
-  },
-  "sidebar_action": {
-    "default_title": "Firefox SEO Inspector",
-    "default_panel": "sidebar/sidebar.html",
+    "default_title": "Open Firefox SEO Inspector window",
     "default_icon": "icons/icon.svg",
-    "open_at_install": false
+    "default_popup": "launcher/launcher.html"
   },
   "content_scripts": [
     {
@@ -64,6 +60,8 @@
         "lib/content-audit.js",
         "lib/security-audit.js",
         "lib/page-extractor.js",
+        "lib/page-type.js",
+        "lib/page-type-dom.js",
         "content/content.js"
       ],
       "run_at": "document_idle"

@@ -273,15 +273,15 @@ Goal: move from single-page inspection to small-site and e-commerce workflows wi
 
 ### Page-type detection
 
-- [ ] Homepage.
-- [ ] Product.
-- [ ] Category/listing.
-- [ ] Article/blog.
-- [ ] CMS/generic content.
-- [ ] Search page.
-- [ ] Faceted/filter page.
-- [ ] Pagination page.
-- [ ] 404/error page.
+- [x] Homepage.
+- [x] Product.
+- [x] Category/listing.
+- [x] Article/blog.
+- [x] CMS/generic content.
+- [x] Search page.
+- [x] Faceted/filter page.
+- [x] Pagination page.
+- [x] 404/error page.
 
 ### Product-page checks
 

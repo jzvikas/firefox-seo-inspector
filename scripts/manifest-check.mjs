@@ -12,8 +12,8 @@ if (manifest.manifest_version !== 3) fail('manifest_version must be 3');
 if (manifest.version !== pkg.version) fail('manifest version must match package.json');
 if (!manifest.background || !Array.isArray(manifest.background.scripts) || !manifest.background.scripts.length) fail('Firefox MV3 background.scripts is required');
 if (manifest.background.service_worker) fail('Firefox build must not depend on background.service_worker');
-if (!manifest.sidebar_action || !manifest.sidebar_action.default_panel) fail('sidebar_action.default_panel is required');
-if (!manifest.action) fail('action is required');
+if (!manifest.action || !manifest.action.default_popup) fail('action.default_popup launcher is required');
+if (manifest.sidebar_action) fail('detached-window build must not register sidebar_action');
 const gecko = manifest.browser_specific_settings && manifest.browser_specific_settings.gecko;
 if (!gecko || typeof gecko.id !== 'string' || !gecko.id.trim()) fail('Firefox MV3 add-on id is required');
 const minFirefox = Number.parseInt(gecko.strict_min_version, 10);
@@ -27,8 +27,7 @@ if (!csp || !csp.includes("script-src 'self'") || !csp.includes("object-src 'non
 if (/unsafe-eval|unsafe-inline|https?:/i.test(csp)) fail('extension CSP must not allow unsafe or remote script execution');
 
 const referenced = new Set();
-referenced.add(manifest.sidebar_action.default_panel);
-if (manifest.sidebar_action.default_icon) referenced.add(manifest.sidebar_action.default_icon);
+referenced.add(manifest.action.default_popup);
 if (manifest.action.default_icon) referenced.add(manifest.action.default_icon);
 for (const script of manifest.background.scripts) referenced.add(script);
 for (const group of manifest.content_scripts) for (const script of group.js || []) referenced.add(script);
