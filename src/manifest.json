@@ -20,7 +20,9 @@
     "scripts": [
       "lib/robots.js",
       "lib/sitemap.js",
-      "background/background.js"
+      "lib/head-signals.js",
+      "background/background.js",
+      "background/hreflang-background.js"
     ]
   },
   "action": {
