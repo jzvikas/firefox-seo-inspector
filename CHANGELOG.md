@@ -21,6 +21,9 @@ All notable changes to this project are documented here.
 - Dedicated Hreflang panel with local tag validation, self-reference and `x-default` checks, duplicate detection, and normalized language/region/script handling.
 - Bounded on-demand hreflang target validation for HTTP status, redirects, reciprocal references, `noindex`, canonical mismatches, and target-level diagnostics.
 - Local HTML head-signal parser for canonical, hreflang, and robots metadata, with automated parser and hreflang validation tests.
+- On-demand image network audit with credential-free HEAD checks and bounded Range fallback for file size/status discovery, redirects, broken resources, and response Content-Type.
+- Image optimization ranking by estimated wasted bytes using intrinsic dimensions, rendered dimensions, and page device-pixel ratio, with format and size-source reporting.
+- Automated tests for image format detection, byte/waste calculations, DPR handling, Content-Length/Content-Range parsing, Range fallback decisions, URL deduplication, and result ranking.
 
 ## [0.1.0] - 2026-09-05
 

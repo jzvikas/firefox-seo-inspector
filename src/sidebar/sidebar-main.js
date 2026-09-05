@@ -9,7 +9,7 @@ function renderAll() {
   renderIssues();
   renderHeadings();
   renderLinks();
-  renderImages();
+  renderImagesNetwork();
   renderSchema();
   renderSocial();
   renderCompare();

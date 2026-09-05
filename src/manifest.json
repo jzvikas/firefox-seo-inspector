@@ -21,8 +21,10 @@
       "lib/robots.js",
       "lib/sitemap.js",
       "lib/head-signals.js",
+      "lib/image-network-utils.js",
       "background/background.js",
-      "background/hreflang-background.js"
+      "background/hreflang-background.js",
+      "background/image-background.js"
     ]
   },
   "action": {

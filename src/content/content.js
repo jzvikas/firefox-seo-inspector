@@ -4,11 +4,17 @@ let observer = null;
 let mutationTimer = null;
 const highlightNodes = new Set();
 
+function pageContext() {
+  return {
+    devicePixelRatio: Math.max(1, Number(window.devicePixelRatio) || 1),
+  };
+}
+
 async function analyzeDocument(doc, locationLike, responseMeta) {
   const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
   const evaluation = SeoCore.evaluateFacts(facts, responseMeta || null);
   evaluation.indexability = Indexability.analyze(facts, responseMeta || null);
-  return { facts, evaluation, responseMeta: responseMeta || null };
+  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: pageContext() };
 }
 
 async function analyzeCurrentPage() {
@@ -75,7 +81,7 @@ async function fetchRawReport() {
   const facts = PageExtractor.extract(rawDocument, rawUrl, { performance: null });
   const evaluation = SeoCore.evaluateFacts(facts, responseMeta);
   evaluation.indexability = Indexability.analyze(facts, responseMeta);
-  return { facts, evaluation, responseMeta };
+  return { facts, evaluation, responseMeta, pageContext: pageContext() };
 }
 
 function notifyPageChanged() {
