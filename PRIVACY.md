@@ -18,7 +18,7 @@ HTTP response metadata for the current browser session is held in Firefox `stora
 
 ## External SEO checks
 
-Link, image, canonical, hreflang, sitemap, and explicit URL-to-URL comparison checks contact the URLs that must be inspected. These requests:
+Link, image, canonical, hreflang, sitemap, crawler-lite, and explicit URL-to-URL comparison checks contact the URLs that must be inspected. These requests:
 
 - are initiated only when the relevant check is requested, except the documented automatic single `robots.txt` discovery for the active page;
 - omit credentials for unrelated/external target checks;
@@ -68,6 +68,16 @@ Page comparison results are kept in the sidebar's in-memory state; they are not 
 The scan is capped at 100 HTTP/HTTPS tabs, processes at most six tab audits concurrently, provides progress and cancellation, and uses a 15-second safety timeout for each content-script audit. A tab whose content script is unavailable is reported as unavailable instead of being fetched as a fallback. Reloading such a tab can inject the extension content script for a later scan.
 
 Multi-tab rows and duplicate-title/description/H1 summaries remain in the sidebar's in-memory state. They are not persisted automatically and are not uploaded. CSV or JSON files are created only when the user explicitly chooses an export action.
+
+## Crawler Lite
+
+**Crawler Lite** is an explicit on-demand local crawl. It starts from the current page by default, or from a user-entered HTTP/HTTPS seed URL. Same-host crawling is enabled by default; the user may explicitly disable that restriction, but the hard crawl limits still apply.
+
+Crawler requests use `GET` with credentials omitted, no referrer, redirects followed, and cache bypass. Each request has a 12-second timeout and a 2 MiB HTML response limit. Non-HTML responses are not parsed as pages. Returned HTML is parsed locally and fetched scripts are not executed.
+
+The crawler is capped at 250 URLs, depth 3, and six concurrent requests. URL normalization and deduplication prevent repeated fetches of the same normalized URL. Pause stops scheduling new work while keeping current results; Resume continues queued work. Cancel aborts in-flight crawler requests for that scan and preserves partial results.
+
+Crawler rows, duplicate-title/description/H1 summaries, and discovered-link state remain in sidebar memory. They are not persisted or uploaded automatically. CSV/JSON files are created only when the user explicitly exports them. See [CRAWLER_LITE.md](CRAWLER_LITE.md).
 
 ## Raw HTML comparison
 
