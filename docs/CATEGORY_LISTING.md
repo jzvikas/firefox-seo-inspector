@@ -42,7 +42,7 @@ Query parameters are classified locally into these generic groups:
 - session-like parameters;
 - other parameters.
 
-A faceted URL that is both self-canonical and not `noindex` receives an index-bloat warning. Tracking/session-like URLs that self-canonicalize also receive a duplicate-crawl-path warning.
+For the current parameterized listing, the Category panel shows canonical state, meta robots, `X-Robots-Tag`, and the effective `noindex` result. A faceted URL that is both self-canonical and effectively indexable receives an index-bloat warning. Tracking/session-like URLs that self-canonicalize are warned only while effectively indexable. Conflicting `index` and `noindex` directives across meta robots and/or `X-Robots-Tag` are reported explicitly.
 
 The audit inspects existing internal links for filter, sort, tracking, and session-like parameters. When many such links are present, the issue can highlight the corresponding anchors in the inspected page. The inventory is bounded and uses existing page data only.
 
@@ -59,6 +59,25 @@ Pagination detection combines the existing page-type trait, recognized page quer
 
 Offset/start parameters are recognized as pagination signals but are not converted into a fake page number because page size is unknown.
 
+### Pagination HTTP check
+
+The Category panel can explicitly run **Check pagination links**. This does not create a new fetch subsystem: it reuses the existing bounded link checker with the same hard limits and privacy behavior:
+
+- maximum 250 unique targets;
+- six concurrent requests;
+- 10-second timeout per request;
+- 30-second scan timeout;
+- credential-free requests with no referrer;
+- cancellation and session caching.
+
+The result separates healthy, broken, redirecting, and unknown pagination targets. Broken pagination anchors can be highlighted in the inspected page. Pagination URLs are deduplicated before the check.
+
+### Pagination metadata families
+
+Tabs and Crawler additionally group URLs into pagination families. The family key removes only recognized pagination components such as `?page=2` or `/page/2/` while preserving meaningful filter/sort parameters. This prevents a filtered red listing from being compared with a filtered black listing merely because both are paginated.
+
+Within each family, the extension reports repeated title and description values across distinct pagination URLs. Same-URL duplicates are ignored, and unrelated paths/facet combinations remain separate. These family-specific groups are also retained in JSON export state.
+
 ## Report integration
 
 The same category audit object is attached to:
@@ -68,10 +87,10 @@ The same category audit object is attached to:
 - explicit URL comparison reports;
 - pages fetched by Crawler Lite through the existing comparison parser.
 
-No extra permission, telemetry, account, backend, remote runtime code, or category-specific network fetch is added.
+The Category UI re-evaluates the current audit with captured HTTP response metadata so `X-Robots-Tag` participates in parameterized-URL decisions. No extra permission, telemetry, account, backend, remote runtime code, or automatic category-specific network fetch is added.
 
 ## Current limits
 
-This first category/listing milestone deliberately does not perform a separate HTTP request for every pagination link. Broken-pagination-link network validation remains a later pagination milestone and can reuse the extension's bounded link/crawler infrastructure rather than creating another unbounded fetch path.
+The pagination HTTP check is intentionally on-demand rather than automatic. It validates targets discovered on the current page but does not attempt to infer an unlimited pagination sequence beyond the links already present.
 
-Duplicate title/description detection already exists in Tabs and Crawler, but grouping duplicates specifically by pagination family remains a separate pagination milestone.
+Pagination-family duplicate detection currently targets title and meta description. H1 duplication remains available through the existing general Tabs/Crawler duplicate analysis rather than being repeated as a pagination-specific rule.

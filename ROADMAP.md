@@ -303,7 +303,7 @@ Goal: move from single-page inspection to small-site and e-commerce workflows wi
 ### Faceted navigation
 
 - [x] Classify filter, sort, pagination, tracking, and session-like query parameters.
-- [ ] Canonical and robots checks for parameterized URLs.
+- [x] Canonical and robots checks for parameterized URLs.
 - [x] Index-bloat risk warning.
 - [x] Highlight parameterized internal links.
 
@@ -311,8 +311,8 @@ Goal: move from single-page inspection to small-site and e-commerce workflows wi
 
 - [x] Detect current page number and neighboring pagination links.
 - [x] Check canonical behavior on page 2+.
-- [ ] Detect duplicate title/description patterns across opened/crawled pages.
-- [ ] Broken pagination link detection.
+- [x] Detect duplicate title/description patterns across opened/crawled pages.
+- [x] Broken pagination link detection.
 
 ### v0.5.0 done when
 
