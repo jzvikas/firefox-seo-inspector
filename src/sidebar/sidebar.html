@@ -18,15 +18,117 @@
     </div>
     <button id="refreshButton" class="icon-button" type="button" title="Refresh audit" aria-label="Refresh audit">↻</button>
   </header>
-  <section id="statusPanel" class="status-panel"><div id="score" class="score">–</div><div class="status-copy"><div id="statusTitle">Waiting for page…</div><div id="statusCounts" class="muted"></div></div></section>
+
+  <section id="statusPanel" class="status-panel">
+    <div id="score" class="score">–</div>
+    <div class="status-copy">
+      <div id="statusTitle">Waiting for page…</div>
+      <div id="statusCounts" class="muted"></div>
+    </div>
+  </section>
+
   <nav class="tabs" aria-label="Inspector sections">
-    <button class="tab active" data-tab="overview" type="button">Overview</button><button class="tab" data-tab="indexability" type="button">Indexability</button><button class="tab" data-tab="performance" type="button">Performance</button><button class="tab" data-tab="content" type="button">Content</button><button class="tab" data-tab="security" type="button">Security</button><button class="tab" data-tab="serp" type="button">SERP</button><button class="tab" data-tab="hreflang" type="button">Hreflang</button><button class="tab" data-tab="issues" type="button">Issues</button><button class="tab" data-tab="headings" type="button">Headings</button><button class="tab" data-tab="links" type="button">Links</button><button class="tab" data-tab="images" type="button">Images</button><button class="tab" data-tab="product" type="button">Product</button><button class="tab" data-tab="category" type="button">Category</button><button class="tab" data-tab="schema" type="button">Schema</button><button class="tab" data-tab="social" type="button">Social</button><button class="tab" data-tab="compare" type="button">Compare</button><button class="tab" data-tab="rules" type="button">Rules</button><button class="tab" data-tab="profiles" type="button">Profiles</button><button class="tab" data-tab="multitab" type="button">Tabs</button><button class="tab" data-tab="crawler" type="button">Crawler</button>
+    <button class="tab active" data-tab="overview" type="button">Overview</button>
+    <button class="tab" data-tab="indexability" type="button">Indexability</button>
+    <button class="tab" data-tab="performance" type="button">Performance</button>
+    <button class="tab" data-tab="content" type="button">Content</button>
+    <button class="tab" data-tab="security" type="button">Security</button>
+    <button class="tab" data-tab="serp" type="button">SERP</button>
+    <button class="tab" data-tab="hreflang" type="button">Hreflang</button>
+    <button class="tab" data-tab="issues" type="button">Issues</button>
+    <button class="tab" data-tab="headings" type="button">Headings</button>
+    <button class="tab" data-tab="links" type="button">Links</button>
+    <button class="tab" data-tab="images" type="button">Images</button>
+    <button class="tab" data-tab="product" type="button">Product</button>
+    <button class="tab" data-tab="category" type="button">Category</button>
+    <button class="tab" data-tab="schema" type="button">Schema</button>
+    <button class="tab" data-tab="social" type="button">Social</button>
+    <button class="tab" data-tab="compare" type="button">Compare</button>
+    <button class="tab" data-tab="rules" type="button">Rules</button>
+    <button class="tab" data-tab="profiles" type="button">Profiles</button>
+    <button class="tab" data-tab="multitab" type="button">Tabs</button>
+    <button class="tab" data-tab="crawler" type="button">Crawler</button>
   </nav>
+
   <main>
-    <section id="overview" class="panel active"></section><section id="indexability" class="panel"></section><section id="performance" class="panel"></section><section id="content" class="panel"></section><section id="security" class="panel"></section><section id="serp" class="panel"></section><section id="hreflang" class="panel"></section><section id="issues" class="panel"></section><section id="headings" class="panel"></section><section id="links" class="panel"></section><section id="images" class="panel"></section><section id="product" class="panel"></section><section id="category" class="panel"></section><section id="schema" class="panel"></section><section id="social" class="panel"></section><section id="compare" class="panel"></section><section id="rules" class="panel"></section><section id="profiles" class="panel"></section><section id="multitab" class="panel"></section><section id="crawler" class="panel"></section>
+    <section id="overview" class="panel active"></section>
+    <section id="indexability" class="panel"></section>
+    <section id="performance" class="panel"></section>
+    <section id="content" class="panel"></section>
+    <section id="security" class="panel"></section>
+    <section id="serp" class="panel"></section>
+    <section id="hreflang" class="panel"></section>
+    <section id="issues" class="panel"></section>
+    <section id="headings" class="panel"></section>
+    <section id="links" class="panel"></section>
+    <section id="images" class="panel"></section>
+    <section id="product" class="panel"></section>
+    <section id="category" class="panel"></section>
+    <section id="schema" class="panel"></section>
+    <section id="social" class="panel"></section>
+    <section id="compare" class="panel"></section>
+    <section id="rules" class="panel"></section>
+    <section id="profiles" class="panel"></section>
+    <section id="multitab" class="panel"></section>
+    <section id="crawler" class="panel"></section>
   </main>
-  <footer class="footer"><button id="copyIssuesButton" type="button">Copy issues</button><button id="exportButton" type="button">Export JSON</button></footer>
-  <script src="../lib/seo-core.js"></script><script src="../lib/custom-rules.js"></script><script src="../lib/domain-profiles.js"></script><script src="../lib/indexability.js"></script><script src="../lib/serp-preview.js"></script><script src="../lib/hreflang.js"></script><script src="../lib/image-audit.js"></script><script src="../lib/sitemap-membership.js"></script><script src="../lib/link-network.js"></script><script src="../lib/link-audit.js"></script><script src="../lib/performance-audit.js"></script><script src="../lib/security-audit.js"></script><script src="../lib/page-extractor.js"></script><script src="../lib/page-type.js"></script><script src="../lib/page-type-dom.js"></script><script src="../lib/product-page-audit.js"></script><script src="../lib/category-page-audit.js"></script><script src="../lib/pagination-audit.js"></script><script src="../lib/snapshot-history.js"></script><script src="../lib/regression.js"></script><script src="../lib/page-compare.js"></script><script src="../lib/multi-tab-audit.js"></script><script src="../lib/crawler-lite.js"></script>
-  <script src="sidebar-base.js"></script><script src="sidebar-detached-target.js"></script><script src="sidebar-page-type.js"></script><script src="sidebar-product.js"></script><script src="sidebar-category.js"></script><script src="sidebar-render.js"></script><script src="sidebar-links-network.js"></script><script src="sidebar-indexability.js"></script><script src="sidebar-canonical-chain.js"></script><script src="sidebar-sitemap-membership.js"></script><script src="sidebar-performance.js"></script><script src="sidebar-performance-hints.js"></script><script src="sidebar-assets.js"></script><script src="sidebar-third-party.js"></script><script src="sidebar-content.js"></script><script src="sidebar-security.js"></script><script src="sidebar-serp.js"></script><script src="sidebar-hreflang.js"></script><script src="sidebar-images-network.js"></script><script src="sidebar-images-rules.js"></script><script src="sidebar-page-compare.js"></script><script src="sidebar-snapshots.js"></script><script src="sidebar-page-compare-wrapper.js"></script><script src="sidebar-rules.js"></script><script src="sidebar-profiles.js"></script><script src="sidebar-multi-tab.js"></script><script src="sidebar-crawler.js"></script><script src="sidebar-pagination-diagnostics.js"></script><script src="sidebar-main.js"></script>
+
+  <footer class="footer">
+    <button id="copyIssuesButton" type="button">Copy issues</button>
+    <button id="exportButton" type="button">Export JSON</button>
+  </footer>
+
+  <script src="../lib/seo-core.js"></script>
+  <script src="../lib/custom-rules.js"></script>
+  <script src="../lib/domain-profiles.js"></script>
+  <script src="../lib/indexability.js"></script>
+  <script src="../lib/serp-preview.js"></script>
+  <script src="../lib/hreflang.js"></script>
+  <script src="../lib/image-audit.js"></script>
+  <script src="../lib/sitemap-membership.js"></script>
+  <script src="../lib/link-network.js"></script>
+  <script src="../lib/link-audit.js"></script>
+  <script src="../lib/performance-audit.js"></script>
+  <script src="../lib/security-audit.js"></script>
+  <script src="../lib/page-extractor.js"></script>
+  <script src="../lib/page-type.js"></script>
+  <script src="../lib/page-type-dom.js"></script>
+  <script src="../lib/product-page-audit.js"></script>
+  <script src="../lib/category-page-audit.js"></script>
+  <script src="../lib/pagination-audit.js"></script>
+  <script src="../lib/snapshot-history.js"></script>
+  <script src="../lib/regression.js"></script>
+  <script src="../lib/page-compare.js"></script>
+  <script src="../lib/multi-tab-audit.js"></script>
+  <script src="../lib/crawler-lite.js"></script>
+  <script src="sidebar-base.js"></script>
+  <script src="sidebar-detached-target.js"></script>
+  <script src="sidebar-page-type.js"></script>
+  <script src="sidebar-product.js"></script>
+  <script src="sidebar-category.js"></script>
+  <script src="sidebar-render.js"></script>
+  <script src="sidebar-links-network.js"></script>
+  <script src="sidebar-indexability.js"></script>
+  <script src="sidebar-canonical-chain.js"></script>
+  <script src="sidebar-sitemap-membership.js"></script>
+  <script src="sidebar-performance.js"></script>
+  <script src="sidebar-performance-hints.js"></script>
+  <script src="sidebar-assets.js"></script>
+  <script src="sidebar-third-party.js"></script>
+  <script src="sidebar-content.js"></script>
+  <script src="sidebar-security.js"></script>
+  <script src="sidebar-serp.js"></script>
+  <script src="sidebar-hreflang.js"></script>
+  <script src="sidebar-images-network.js"></script>
+  <script src="sidebar-images-rules.js"></script>
+  <script src="sidebar-page-compare.js"></script>
+  <script src="sidebar-snapshots.js"></script>
+  <script src="sidebar-page-compare-wrapper.js"></script>
+  <script src="sidebar-rules.js"></script>
+  <script src="sidebar-profiles.js"></script>
+  <script src="sidebar-multi-tab.js"></script>
+  <script src="sidebar-crawler.js"></script>
+  <script src="sidebar-pagination-diagnostics.js"></script>
+  <script src="sidebar-main.js"></script>
 </body>
 </html>
