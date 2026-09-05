@@ -23,6 +23,12 @@ function report(url, overrides) {
       severityCounts: { critical: 0, warning: 0 },
       indexability: { verdict: 'Indexable' },
     }, extra.evaluation || {}),
+    pageType: extra.pageType || {
+      primary: 'category',
+      label: 'Category / listing',
+      confidence: 'high',
+      traits: { faceted: false, pagination: false },
+    },
   };
 }
 
@@ -69,23 +75,28 @@ test('next frontier deduplicates against previously seen URLs and respects remai
   assert.equal(result.seen.has('https://example.com/a'), true);
 });
 
-test('summarize records redirect final URL SEO fields and counts', () => {
+test('summarize records redirect SEO page-type fields and counts', () => {
   const resource = { requestedUrl: 'https://example.com/a', url: 'https://example.com/b', status: 200, redirected: true };
   const row = CrawlerLite.summarize(resource, report('https://example.com/b', {
     evaluation: { issues: [{ id: 'x', severity: 'warning' }], severityCounts: { warning: 1 }, score: 95, indexability: { verdict: 'Indexable' } },
+    pageType: { primary: 'category', label: 'Category / listing', confidence: 'medium', traits: { faceted: true, pagination: true } },
   }), 1, 'https://example.com/');
   assert.equal(row.redirected, true);
   assert.equal(row.statusCode, 200);
   assert.equal(row.depth, 1);
   assert.equal(row.issueCount, 1);
   assert.equal(row.h1, 'Page H1');
+  assert.equal(row.pageType, 'Category / listing');
+  assert.equal(row.pageTypeConfidence, 'medium');
+  assert.equal(row.pageTraits, 'Faceted · Pagination');
 });
 
-test('error rows preserve fetch state without inventing SEO facts', () => {
+test('error rows preserve fetch state without inventing SEO or page-type facts', () => {
   const row = CrawlerLite.errorRow('https://example.com/a', 2, 'https://example.com/', { status: 0, error: 'timeout' });
   assert.equal(row.available, false);
   assert.equal(row.error, 'timeout');
   assert.equal(row.title, '');
+  assert.equal(row.pageType, '');
   assert.equal(row.depth, 2);
 });
 
@@ -99,22 +110,25 @@ test('duplicate annotation normalizes title description and H1 values independen
   assert.equal(result.rows.some((row) => row.duplicateDescription), false);
 });
 
-test('filter and sort support error redirect duplicate issue and text workflows', () => {
+test('filter and sort support error redirect duplicate issue page-type and text workflows', () => {
   const rows = [
-    { url: 'https://example.com/a', available: true, statusCode: 200, redirected: true, issueCount: 1, duplicateTitle: true, duplicateDescription: false, duplicateH1: false, title: 'Alpha', description: '', h1: '', canonical: '', robots: '', depth: 1 },
-    { url: 'https://example.com/b', available: false, statusCode: 0, redirected: false, issueCount: 0, duplicateTitle: false, duplicateDescription: false, duplicateH1: false, title: 'Beta', description: '', h1: '', canonical: '', robots: '', depth: 0 },
+    { url: 'https://example.com/a', available: true, statusCode: 200, redirected: true, issueCount: 1, duplicateTitle: true, duplicateDescription: false, duplicateH1: false, title: 'Alpha', description: '', h1: '', canonical: '', robots: '', pageType: 'Product', pageTraits: '', depth: 1 },
+    { url: 'https://example.com/b', available: false, statusCode: 0, redirected: false, issueCount: 0, duplicateTitle: false, duplicateDescription: false, duplicateH1: false, title: 'Beta', description: '', h1: '', canonical: '', robots: '', pageType: 'Article / blog', pageTraits: '', depth: 0 },
   ];
-  assert.equal(CrawlerLite.filterRows(rows, { query: 'alpha', redirectsOnly: true, duplicatesOnly: true, issuesOnly: true }).length, 1);
+  assert.equal(CrawlerLite.filterRows(rows, { query: 'product', redirectsOnly: true, duplicatesOnly: true, issuesOnly: true }).length, 1);
   assert.equal(CrawlerLite.filterRows(rows, { errorsOnly: true }).length, 1);
   assert.deepEqual(CrawlerLite.sortRows(rows, 'depth', 'asc').map((row) => row.url), ['https://example.com/b', 'https://example.com/a']);
+  assert.deepEqual(CrawlerLite.sortRows(rows, 'pageType', 'asc').map((row) => row.url), ['https://example.com/b', 'https://example.com/a']);
 });
 
-test('CSV and JSON exports preserve crawl-specific fields', () => {
-  const rows = [{ depth: 1, requestedUrl: 'https://example.com/a,b', url: 'https://example.com/a,b', statusCode: 200, title: 'A "title"' }];
+test('CSV and JSON exports preserve crawl-specific and page-type fields', () => {
+  const rows = [{ depth: 1, requestedUrl: 'https://example.com/a,b', url: 'https://example.com/a,b', statusCode: 200, pageType: 'Product', pageTypeConfidence: 'high', title: 'A "title"' }];
   const csv = CrawlerLite.toCsv(rows);
+  assert.match(csv, /Page type,Page type confidence,Page traits/);
   assert.match(csv, /"https:\/\/example\.com\/a,b"/);
   assert.match(csv, /"A ""title"""/);
   const parsed = JSON.parse(CrawlerLite.toJson('https://example.com/', { urlLimit: 10, depthLimit: 1 }, rows, { titles: [] }));
   assert.equal(parsed.options.urlLimit, 10);
   assert.equal(parsed.rows.length, 1);
+  assert.equal(parsed.rows[0].pageType, 'Product');
 });
