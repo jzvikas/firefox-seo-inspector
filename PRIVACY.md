@@ -12,6 +12,8 @@ A page snapshot is stored only when the user clicks **Save snapshot**. Snapshots
 
 Custom audit rules are stored only in Firefox `browser.storage.local` on the current browser. They contain thresholds, required-signal toggles, disabled check IDs, and severity overrides. They are not uploaded, do not contain page content, and do not modify the inspected website. Resetting Rules removes the saved custom-rule record and restores built-in defaults.
 
+Domain profiles are also stored only in `browser.storage.local`. A profile contains the exact hostname entered implicitly from the page being inspected, an optional local label, local policy overrides, expected schema/hreflang values, and ignored check IDs. Profiles are not uploaded, do not modify the inspected website, and are capped at 200 records. The public repository contains no saved user profile records or configured personal/customer hostnames.
+
 HTTP response metadata for the current browser session is held in Firefox `storage.session`, which is memory-backed and cleared when the browser session ends.
 
 ## External SEO checks
@@ -54,6 +56,8 @@ Sitemap checks fetch and parse sitemap XML locally. Sitemap traversal is bounded
 **Current tab vs another open tab** uses the extension's already-injected content script to analyze the rendered DOM in the selected open HTTP/HTTPS tab. It does not issue an additional page request solely for that comparison.
 
 **URL A vs URL B** is an explicit on-demand raw-HTML comparison. Each URL is fetched with credentials omitted and no referrer, with redirects followed, a 12-second request timeout, and a 2 MiB HTML response limit per URL. Non-HTML responses are rejected. HTML error responses such as 404 or 500 pages may still be analyzed so their actual SEO state can be compared. Returned HTML is parsed locally and fetched page scripts are not executed by the comparison parser.
+
+When local domain profiles exist, each compared final URL resolves its own exact-hostname profile locally before the audit is evaluated. Profile lookup does not issue a network request and does not expose the stored profile to the compared site.
 
 Page comparison results are kept in the sidebar's in-memory state; they are not uploaded or sent to the extension author.
 
