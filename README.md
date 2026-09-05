@@ -1,8 +1,16 @@
 # Firefox SEO Inspector
 
-Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is designed for fast page-level inspection without sending inspected page data to a third-party service.
+Firefox SEO Inspector is a local-first technical SEO inspector for Firefox. It opens in a separate movable and resizable browser window so the inspected website keeps its normal width, and it does not send inspected page data to a third-party service.
 
 ## Current release: v0.2.0
+
+### Inspector window workflow
+
+- Click the extension toolbar icon to open a separate Inspector window.
+- The Inspector window can be moved, resized, minimized, maximized, and positioned independently from the website window.
+- Opening the toolbar action again focuses the existing Inspector window instead of creating duplicate windows.
+- The Inspector follows the active tab in normal Firefox windows while ignoring its own extension window.
+- The generated unsigned package uses the neutral filename `seo-inspector-<version>.xpi` with a matching `.sha256` checksum.
 
 ### Indexability and redirects
 
@@ -153,7 +161,7 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - URL comparison retains HTML 4xx/5xx responses so real error-page metadata, indexability, headings, schema, headers, and issues can be compared instead of being reduced to a generic fetch error.
 - Side-by-side rows cover metadata, HTTP status, SEO score, robots/indexability, heading count/H1/outline, link totals/rel states/targets, images, schema, hreflang, SEO/security response headers, and issue counts/IDs.
 - **Diff only** is enabled by default and can be toggled off to inspect equal rows too.
-- Detail inventories are capped at 80 entries with individual text capped at 160 characters so very large pages do not flood or freeze the sidebar.
+- Detail inventories are capped at 80 entries with individual text capped at 160 characters so very large pages do not flood or freeze the Inspector window.
 - Raw URL HTML is parsed locally with the fetched page's final URL as the document base. The parser does not execute scripts from fetched comparison pages.
 - Tab-comparison results are cleared when the current tab or its URL changes, preventing a stale comparison from surviving normal or SPA navigation.
 
@@ -184,11 +192,11 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 
 - Dedicated **Tabs** panel audits already-open HTTP/HTTPS tabs on demand without crawling or refetching those pages.
 - Scans at most 100 tabs with up to six concurrent content-script audits, live progress, cancellation, and a 15-second safety timeout per tab audit.
-- Collects URL, HTTP status, title, description, first H1/H1 count, canonical, robots, indexability, SEO score, and issue counts.
+- Collects URL, HTTP status, title, description, first H1/H1 count, canonical, robots, indexability, SEO score, issue counts, and detected page type.
 - Detects normalized duplicate titles, descriptions, and H1 values across available tabs and visibly annotates duplicate rows.
-- Supports search, indexability/issue/duplicate/availability filters, configurable sorting, and CSV/JSON export.
+- Supports search, page-type/indexability/issue/duplicate/availability filters, configurable sorting, and CSV/JSON export.
 - Tabs without an injected content script are reported as unavailable instead of being silently refetched; reloading the tab makes it eligible for a later scan.
-- Multi-tab results stay in sidebar memory unless the user explicitly exports them.
+- Multi-tab results stay in Inspector-window memory unless the user explicitly exports them.
 
 ### Crawler Lite
 
@@ -196,12 +204,20 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Same-host crawling is enabled by default; configurable hard limits allow at most 250 URLs and depth 3, with URL normalization/deduplication and six concurrent requests.
 - Live progress plus Pause/Resume/Cancel; Cancel aborts in-flight requests for that crawl while preserving partial results.
 - Each crawler GET omits credentials and referrer, follows redirects, has a 12-second timeout, and accepts at most 2 MiB of HTML per URL. Fetched scripts are never executed.
-- Collects status, title, description, H1, canonical, robots, indexability, score, and issue counts, then detects redirects/errors and duplicate title/description/H1 values.
-- Search/filter/sort and CSV/JSON export are local to the sidebar. See [CRAWLER_LITE.md](CRAWLER_LITE.md).
+- Collects status, title, description, H1, canonical, robots, indexability, score, issue counts, and page type, then detects redirects/errors and duplicate title/description/H1 values.
+- Search/filter/sort and CSV/JSON export are local to the Inspector window. See [CRAWLER_LITE.md](CRAWLER_LITE.md).
+
+### Page-type detection
+
+- Platform-neutral primary types: Homepage, Product, Category/listing, Article/blog, Search, CMS/generic content, and 404/error.
+- Independent Faceted/filter and Pagination traits so URL-state signals do not overwrite the primary content type.
+- High/medium/low confidence plus bounded human-readable evidence.
+- Uses local HTTP status, URL, JSON-LD, Open Graph, microdata, semantic DOM, search controls, and pagination signals without extra page-type network requests.
+- Page type is visible in Overview and carried through raw/URL comparisons, Tabs, Crawler Lite, filters, sorting, and CSV/JSON exports. See [PAGE_TYPE.md](PAGE_TYPE.md).
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. Richer global/URL/selector ignore-rule management remains open; the next Top-15 multi-page milestone is **Page-type detection**.
+See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. Richer global/URL/selector ignore-rule management remains open; the next Top-15 multi-page milestone is **Product-page checks**.
 
 ## Install for development
 
@@ -211,13 +227,14 @@ Requires Firefox 142 or newer.
 2. Open `about:debugging#/runtime/this-firefox` in Firefox.
 3. Choose **Load Temporary Add-on**.
 4. Select `src/manifest.json`.
-5. Click the toolbar icon or open **View → Sidebar → Firefox SEO Inspector**.
+5. Open an HTTP/HTTPS page and click the extension toolbar icon. Firefox SEO Inspector opens in a separate movable/resizable window.
+6. After source changes, use **Reload** for the temporary extension in `about:debugging`; you do not need to select the manifest again.
 
-A prebuilt unsigned package is also kept in `dist/`. Stable Firefox generally requires Mozilla signing for permanent installation; the source can always be loaded temporarily for development.
+A prebuilt unsigned package is also kept in `dist/` as `seo-inspector-<version>.xpi`. Stable Firefox generally requires signing for permanent installation; the source can always be loaded temporarily for development.
 
 ## Permissions and network behavior
 
-The extension requests access to HTTP and HTTPS pages because its job is to inspect the active page and, only when required by a feature, check related URLs. The `webRequest` permission is used read-only to capture SEO-relevant response metadata, redirect hops, and selected main-document security response headers.
+The extension requests access to HTTP and HTTPS pages because its job is to inspect the selected browser tab and, only when required by a feature, check related URLs. The `tabs` permission is also used to keep the detached Inspector window associated with the active tab in normal browser windows. The Inspector window itself is ignored as an audit target. The `webRequest` permission is used read-only to capture SEO-relevant response metadata, redirect hops, and selected main-document security response headers.
 
 External link, image, canonical, hreflang, sitemap, crawler-lite, and explicit URL-to-URL comparison checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total/per-request timeouts. The link checker also maintains a bounded in-memory session cache for successful results; explicit re-checks bypass it. `robots.txt` discovery is a single size/time-bounded request and is cached briefly. URL A/B comparison fetches only the two user-entered HTTP/HTTPS documents, with a 2 MiB limit and 12-second timeout per document. Crawler Lite is a separate explicit bounded crawl with a 250-URL/depth-3 hard cap and the limits documented above.
 
@@ -229,9 +246,9 @@ The Security panel reads current-page DOM/resource references plus selected secu
 
 Snapshot history, regression summaries, custom audit rules, and domain profiles are stored only in `browser.storage.local`. Snapshot history is capped at 50 records per exact normalized URL. Regression snapshots store bounded summaries rather than full performance/resource inventories, and on-demand network status counts are included only when those checks actually ran. Custom rules contain policy values only. Domain profiles contain the hostname plus local policy/expectation values and are capped at 200 records. None of this data is uploaded by the extension.
 
-The **Tabs** multi-tab audit reuses the existing content scripts in already-open HTTP/HTTPS tabs. It does not make a fallback page request when a tab cannot be analyzed. Results are held only in sidebar memory until explicitly exported to CSV or JSON.
+The **Tabs** multi-tab audit reuses the existing content scripts in already-open HTTP/HTTPS tabs. It does not make a fallback page request when a tab cannot be analyzed. Results are held only in Inspector-window memory until explicitly exported to CSV or JSON.
 
-Crawler Lite fetches only URLs selected by its bounded queue, stores results in sidebar memory, and does not upload the crawl dataset. Same-host is the safe default; disabling it is an explicit user action and does not remove the URL/depth/request/byte caps.
+Crawler Lite fetches only URLs selected by its bounded queue, stores results in Inspector-window memory, and does not upload the crawl dataset. Same-host is the safe default; disabling it is an explicit user action and does not remove the URL/depth/request/byte caps.
 
 **Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. **URL A vs URL B** is a separate credential-free comparison and never uses page credentials. See [PRIVACY.md](PRIVACY.md).
 
@@ -252,7 +269,7 @@ Run the complete local gate with:
 npm run check
 ```
 
-The build is deterministic. `npm run build` creates the current unsigned XPI and its SHA-256 checksum in `dist/`.
+The build is deterministic. `npm run build` creates `dist/seo-inspector-<version>.xpi` and its SHA-256 checksum.
 
 ## Repository policy
 
