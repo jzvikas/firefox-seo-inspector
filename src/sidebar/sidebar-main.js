@@ -21,6 +21,7 @@ function renderAll() {
   renderCompare();
   renderRules();
   renderProfiles();
+  renderMultiTab();
 }
 
 function activateTab(name) {

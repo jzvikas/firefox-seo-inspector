@@ -61,6 +61,14 @@ When local domain profiles exist, each compared final URL resolves its own exact
 
 Page comparison results are kept in the sidebar's in-memory state; they are not uploaded or sent to the extension author.
 
+## Multi-tab audit
+
+**Scan open tabs** is an explicit local action. It reads the browser's existing HTTP/HTTPS tab list and asks the extension content script already present in each selected tab for the same rendered-page audit used by the normal sidebar. It does not crawl links and does not refetch the tab URLs solely for the multi-tab audit.
+
+The scan is capped at 100 HTTP/HTTPS tabs, processes at most six tab audits concurrently, provides progress and cancellation, and uses a 15-second safety timeout for each content-script audit. A tab whose content script is unavailable is reported as unavailable instead of being fetched as a fallback. Reloading such a tab can inject the extension content script for a later scan.
+
+Multi-tab rows and duplicate-title/description/H1 summaries remain in the sidebar's in-memory state. They are not persisted automatically and are not uploaded. CSV or JSON files are created only when the user explicitly chooses an export action.
+
 ## Raw HTML comparison
 
 **Compare raw HTML** is a separate explicit exception to the credential-free external-check policy. It performs a GET of the current page using the current page's browser credentials so authenticated source is comparable with the rendered page. It does not fetch an unrelated target, runs only when the user asks for the comparison, and the returned HTML remains local to the browser extension.

@@ -178,9 +178,21 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Rendered pages, authenticated raw-source audits, open-tab comparisons, and URL A/B comparisons resolve the profile for the URL being audited. URL A and URL B can therefore use different profiles.
 - Profiles are capped at 200 local records and never ship with repository-defined hostnames. See [DOMAIN_PROFILES.md](DOMAIN_PROFILES.md).
 
+## Unreleased v0.5 work
+
+### Multi-tab audit
+
+- Dedicated **Tabs** panel audits already-open HTTP/HTTPS tabs on demand without crawling or refetching those pages.
+- Scans at most 100 tabs with up to six concurrent content-script audits, live progress, cancellation, and a 15-second safety timeout per tab audit.
+- Collects URL, HTTP status, title, description, first H1/H1 count, canonical, robots, indexability, SEO score, and issue counts.
+- Detects normalized duplicate titles, descriptions, and H1 values across available tabs and visibly annotates duplicate rows.
+- Supports search, indexability/issue/duplicate/availability filters, configurable sorting, and CSV/JSON export.
+- Tabs without an injected content script are reported as unavailable instead of being silently refetched; reloading the tab makes it eligible for a later scan.
+- Multi-tab results stay in sidebar memory unless the user explicitly exports them.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is richer ignore-rule management.
+See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. Richer global/URL/selector ignore-rule management remains open; the next Top-15 multi-page milestone is **Crawler Lite**.
 
 ## Install for development
 
@@ -207,6 +219,8 @@ The Content panel performs a bounded local DOM scan and does not make network re
 The Security panel reads current-page DOM/resource references plus selected security headers already observed on the main document. It does not fetch external security databases or issue extra security-audit requests. Cookie Secure/HttpOnly/SameSite inspection is not enabled, so the extension does not request cookie access for this feature.
 
 Snapshot history, regression summaries, custom audit rules, and domain profiles are stored only in `browser.storage.local`. Snapshot history is capped at 50 records per exact normalized URL. Regression snapshots store bounded summaries rather than full performance/resource inventories, and on-demand network status counts are included only when those checks actually ran. Custom rules contain policy values only. Domain profiles contain the hostname plus local policy/expectation values and are capped at 200 records. None of this data is uploaded by the extension.
+
+The **Tabs** multi-tab audit reuses the existing content scripts in already-open HTTP/HTTPS tabs. It does not make a fallback page request when a tab cannot be analyzed. Results are held only in sidebar memory until explicitly exported to CSV or JSON.
 
 **Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. **URL A vs URL B** is a separate credential-free comparison and never uses page credentials. See [PRIVACY.md](PRIVACY.md).
 

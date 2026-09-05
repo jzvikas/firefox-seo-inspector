@@ -28,29 +28,34 @@ test('every sidebar script and stylesheet reference exists on disk', () => {
   }
 });
 
-test('custom rules and domain profiles load before their renderers and main bootstrap', () => {
+test('custom rules domain profiles and multi-tab model load before their renderers and main bootstrap', () => {
   const html = fs.readFileSync(sidebarPath, 'utf8');
   const scripts = scriptSources(html);
   const customRules = scripts.indexOf('../lib/custom-rules.js');
   const domainProfiles = scripts.indexOf('../lib/domain-profiles.js');
+  const multiTabModel = scripts.indexOf('../lib/multi-tab-audit.js');
   const imagesNetwork = scripts.indexOf('sidebar-images-network.js');
   const imagesRules = scripts.indexOf('sidebar-images-rules.js');
   const rules = scripts.indexOf('sidebar-rules.js');
   const profiles = scripts.indexOf('sidebar-profiles.js');
+  const multiTab = scripts.indexOf('sidebar-multi-tab.js');
   const main = scripts.indexOf('sidebar-main.js');
   assert.ok(customRules >= 0);
   assert.ok(domainProfiles > customRules);
+  assert.ok(multiTabModel >= 0);
   assert.ok(imagesNetwork >= 0);
   assert.ok(imagesRules > imagesNetwork);
   assert.ok(rules > customRules);
   assert.ok(profiles > domainProfiles);
   assert.ok(profiles > rules);
+  assert.ok(multiTab > multiTabModel);
   assert.ok(main > rules);
   assert.ok(main > profiles);
+  assert.ok(main > multiTab);
   assert.ok(main > imagesRules);
 });
 
-test('Rules and Profiles tabs, panels, and renderAll hooks stay in sync', () => {
+test('Rules Profiles and Tabs panels stay in sync with renderAll', () => {
   const html = fs.readFileSync(sidebarPath, 'utf8');
   const main = read('src/sidebar/sidebar-main.js');
   assert.match(html, /data-tab="rules"/);
@@ -59,6 +64,9 @@ test('Rules and Profiles tabs, panels, and renderAll hooks stay in sync', () => 
   assert.match(html, /data-tab="profiles"/);
   assert.match(html, /<section id="profiles" class="panel"><\/section>/);
   assert.match(main, /\brenderProfiles\(\);/);
+  assert.match(html, /data-tab="multitab"/);
+  assert.match(html, /<section id="multitab" class="panel"><\/section>/);
+  assert.match(main, /\brenderMultiTab\(\);/);
 });
 
 test('content script loads CustomRules and DomainProfiles before content bootstrap', () => {

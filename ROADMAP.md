@@ -251,11 +251,11 @@ Goal: move from single-page inspection to small-site and e-commerce workflows wi
 
 ### Multi-tab audit
 
-- [ ] Scan all open HTTP/HTTPS tabs.
-- [ ] Collect URL, status, title, description, H1, canonical, robots, indexability, and issue counts.
-- [ ] Detect duplicate titles, descriptions, and H1 values across tabs.
-- [ ] Sort and filter results.
-- [ ] CSV/JSON export.
+- [x] Scan all open HTTP/HTTPS tabs.
+- [x] Collect URL, status, title, description, H1, canonical, robots, indexability, and issue counts.
+- [x] Detect duplicate titles, descriptions, and H1 values across tabs.
+- [x] Sort and filter results.
+- [x] CSV/JSON export.
 
 ### Crawler Lite
 
