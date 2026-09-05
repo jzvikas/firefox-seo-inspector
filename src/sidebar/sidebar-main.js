@@ -7,6 +7,7 @@ function renderAll() {
   renderPerformance();
   renderPerformanceHints();
   renderAssetAudit();
+  renderThirdPartyAudit();
   renderSerp();
   renderHreflang();
   renderIssues();

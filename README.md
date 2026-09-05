@@ -88,9 +88,16 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Inline JavaScript/CSS source is not copied into the asset inventory; only metadata and character counts are retained.
 - Asset inventories are capped at 1,000 entries per category and never refetch resources just to obtain size.
 
+### Third-party resources
+
+- Groups observed third-party Resource Timing entries by hostname.
+- Shows request count, known bytes, unknown-size coverage, resource-type mix, and bounded sample URLs per domain.
+- Uses local heuristics to identify common analytics, tag-manager, widget, advertising, and CDN hosts; unrecognized hosts remain explicitly unclassified.
+- Uses only already-collected local Resource Timing data and makes no additional requests.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestone focuses on richer third-party resource grouping/classification, content diagnostics, link-audit improvements, and security headers.
+See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestones focus on content diagnostics, link-audit intelligence, and security inspection before moving into regression and multi-page workflows.
 
 ## Install for development
 
@@ -110,7 +117,7 @@ The extension requests access to HTTP and HTTPS pages because its job is to insp
 
 External link, image, canonical, hreflang, and sitemap checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. `robots.txt` discovery is a single size/time-bounded request and is cached briefly.
 
-The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints and asset inspection. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
+The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints, asset inspection, and third-party grouping. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. Third-party service categories are local heuristics rather than network lookups. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
 
 **Compare raw HTML** is intentionally different: when explicitly requested, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
 

@@ -26,7 +26,8 @@ async function analyzeDocument(doc, locationLike, responseMeta) {
     getComputedStyle: typeof window.getComputedStyle === 'function' ? window.getComputedStyle.bind(window) : null,
   }, performance);
   const assetAudit = AssetAudit.collect(doc, pageUrl, performance);
-  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: context, performance, performanceHints, assetAudit };
+  const thirdPartyAudit = ThirdPartyAudit.collect(performance);
+  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: context, performance, performanceHints, assetAudit, thirdPartyAudit };
 }
 
 async function analyzeCurrentPage() {

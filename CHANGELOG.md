@@ -18,6 +18,9 @@ All notable changes to this project are documented here.
 - CSS asset inventory with external stylesheet and inline-style counts, media/disabled state, first-party/third-party attribution, Resource Timing size/duration matching, and duplicate stylesheet detection.
 - Known-size warnings for JavaScript resources at least 250 KiB and CSS resources at least 100 KiB, without fetching assets again or guessing unknown cross-origin/cache sizes.
 - Automated tests for asset URL normalization, loading flags, inline-source privacy, timing matching, duplicate detection, third-party grouping, size thresholds, and 1,000-item safety caps.
+- Third-party Resource Timing audit grouped by hostname with request counts, known/unknown byte coverage, resource-type mix, and bounded sample URLs.
+- Local heuristic classification of common analytics, tag-manager, widget, advertising, and CDN resource hosts without external lookups or additional requests.
+- Automated tests for exact/subdomain matching, local pattern classification, unknown-size preservation, bounded samples, deterministic ordering, and category summaries.
 
 ## [0.2.0] - 2026-09-05
 
