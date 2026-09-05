@@ -159,8 +159,8 @@ Goal: explain what makes a page heavy, fragile, or technically weak.
 ### v0.3.0 done when
 
 - [ ] One sidebar view explains the main SEO, performance, and security risks of a page.
-- [ ] Expensive checks are on-demand and do not block normal sidebar use.
-- [ ] Resource-heavy pages remain responsive while analysis is running.
+- [x] Expensive checks are on-demand and do not block normal sidebar use.
+- [x] Resource-heavy pages remain responsive while analysis is running.
 
 ## v0.4.0 — Regression, comparison, and personal workflows
 
@@ -335,7 +335,7 @@ Goal: make the extension dependable enough for continuous personal use.
 ### Performance
 
 - [x] Fast initial sidebar render.
-- [ ] Heavy checks run incrementally or on demand.
+- [x] Heavy checks run incrementally or on demand.
 - [x] Large DOMs and link/image inventories do not freeze the sidebar.
 - [x] Memory is released when tabs close or audits are cancelled.
 

@@ -23,7 +23,30 @@ const PANEL_RENDERERS = Object.freeze({
   crawler: [renderCrawler],
 });
 
+const HEAVY_PANEL_GROUP = Object.freeze({
+  performance: 'performance',
+  content: 'content',
+  security: 'security',
+});
+
+const HEAVY_REPORT_FIELDS = Object.freeze([
+  'pageContext',
+  'performance',
+  'performanceHints',
+  'assetAudit',
+  'thirdPartyAudit',
+  'contentAudit',
+  'securityAudit',
+]);
+
 const panelDirty = new Set(Object.keys(PANEL_RENDERERS));
+const heavyAuditUiState = {
+  pageUrl: '',
+  generation: 0,
+  pending: null,
+  loadingGroups: [],
+  errors: new Map(),
+};
 let activePanelName = 'overview';
 
 function runtimeErrorInfo(error) {
@@ -94,11 +117,152 @@ function markAllPanelsDirty() {
   Object.keys(PANEL_RENDERERS).forEach((name) => panelDirty.add(name));
 }
 
+function reportPageUrl() {
+  return state.report && state.report.facts ? String(state.report.facts.url || '') : '';
+}
+
+function resetHeavyAuditUiState() {
+  heavyAuditUiState.pageUrl = '';
+  heavyAuditUiState.generation += 1;
+  heavyAuditUiState.pending = null;
+  heavyAuditUiState.loadingGroups = [];
+  heavyAuditUiState.errors = new Map();
+}
+
+function syncHeavyAuditUiState() {
+  const url = reportPageUrl();
+  if (heavyAuditUiState.pageUrl === url) return;
+  heavyAuditUiState.pageUrl = url;
+  heavyAuditUiState.generation += 1;
+  heavyAuditUiState.pending = null;
+  heavyAuditUiState.loadingGroups = [];
+  heavyAuditUiState.errors = new Map();
+}
+
+function heavyGroupReady(group) {
+  if (!state.report) return false;
+  if (group === 'performance') {
+    return Boolean(state.report.performance && state.report.performanceHints && state.report.assetAudit && state.report.thirdPartyAudit);
+  }
+  if (group === 'content') return Boolean(state.report.contentAudit);
+  if (group === 'security') return Boolean(state.report.securityAudit);
+  return true;
+}
+
+function normalizedHeavyUiGroups(groups) {
+  const allowed = new Set(['performance', 'content', 'security']);
+  return Array.from(new Set((Array.isArray(groups) ? groups : [groups])
+    .map((value) => String(value || '').toLowerCase())
+    .filter((value) => allowed.has(value))));
+}
+
+function mergeHeavyAuditResult(result) {
+  if (!result || !state.report) return;
+  HEAVY_REPORT_FIELDS.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(result, field) && result[field] !== undefined) state.report[field] = result[field];
+  });
+  state.report.heavyAudit = Object.assign({}, state.report.heavyAudit || {}, result.groups || {});
+}
+
+function renderHeavyPanelState(name, group) {
+  const panel = document.getElementById(name);
+  if (!panel) return;
+  clear(panel);
+  const error = heavyAuditUiState.errors.get(group);
+  if (error) {
+    const node = el('div', 'issue warning');
+    node.appendChild(el('div', 'issue-title', `${group[0].toUpperCase()}${group.slice(1)} inspection did not complete`));
+    node.appendChild(el('div', 'issue-message', error));
+    const retry = el('button', '', 'Retry');
+    retry.type = 'button';
+    retry.addEventListener('click', () => {
+      heavyAuditUiState.errors.delete(group);
+      ensureHeavyAuditGroups([group]).catch(() => {});
+      renderHeavyPanelState(name, group);
+    });
+    node.appendChild(retry);
+    panel.appendChild(node);
+    return;
+  }
+  panel.appendChild(el('div', 'empty', `Loading ${group} inspection on demand…`));
+  panel.appendChild(el('div', 'muted', 'Heavy local DOM/resource checks run only when this workflow is opened or explicitly needed by export/comparison.'));
+}
+
+async function ensureHeavyAuditGroups(groups) {
+  if (!state.report || typeof state.tabId !== 'number') return null;
+  syncHeavyAuditUiState();
+  const requested = normalizedHeavyUiGroups(groups);
+  let missing = requested.filter((group) => !heavyGroupReady(group));
+  if (!missing.length) return state.report;
+
+  if (heavyAuditUiState.pending) {
+    await heavyAuditUiState.pending.catch(() => null);
+    missing = requested.filter((group) => !heavyGroupReady(group));
+    if (!missing.length) return state.report;
+  }
+
+  const generation = heavyAuditUiState.generation;
+  const tabId = state.tabId;
+  const pageUrl = reportPageUrl();
+  heavyAuditUiState.loadingGroups = missing.slice();
+  missing.forEach((group) => heavyAuditUiState.errors.delete(group));
+
+  const operation = browser.tabs.sendMessage(tabId, {
+    type: 'seoInspector.analyzeHeavy',
+    groups: missing,
+  });
+  heavyAuditUiState.pending = operation;
+
+  try {
+    const result = await operation;
+    const stillCurrent = generation === heavyAuditUiState.generation
+      && state.tabId === tabId
+      && reportPageUrl() === pageUrl;
+    if (!stillCurrent) return null;
+    if (!result || String(result.url || '') !== pageUrl) throw new Error('Heavy audit returned stale page data.');
+    mergeHeavyAuditResult(result);
+    missing.forEach((group) => heavyAuditUiState.errors.delete(group));
+    missing.forEach((group) => {
+      const panel = Object.keys(HEAVY_PANEL_GROUP).find((name) => HEAVY_PANEL_GROUP[name] === group);
+      if (panel) markPanelDirty(panel);
+    });
+    if (HEAVY_PANEL_GROUP[activePanelName] && missing.includes(HEAVY_PANEL_GROUP[activePanelName])) {
+      renderPanel(activePanelName, { force: true });
+    }
+    return state.report;
+  } catch (error) {
+    const stillCurrent = generation === heavyAuditUiState.generation
+      && state.tabId === tabId
+      && reportPageUrl() === pageUrl;
+    if (stillCurrent) {
+      const info = runtimeErrorInfo(error);
+      missing.forEach((group) => heavyAuditUiState.errors.set(group, info.message || 'Heavy local inspection failed.'));
+      if (HEAVY_PANEL_GROUP[activePanelName] && missing.includes(HEAVY_PANEL_GROUP[activePanelName])) {
+        renderHeavyPanelState(activePanelName, HEAVY_PANEL_GROUP[activePanelName]);
+      }
+    }
+    throw error;
+  } finally {
+    if (generation === heavyAuditUiState.generation && heavyAuditUiState.pending === operation) {
+      heavyAuditUiState.pending = null;
+      heavyAuditUiState.loadingGroups = [];
+    }
+  }
+}
+
 function renderPanel(name, options) {
   const renderers = PANEL_RENDERERS[name];
   if (!renderers) return false;
   const opts = options || {};
   if (!opts.force && !panelDirty.has(name)) return true;
+
+  const heavyGroup = HEAVY_PANEL_GROUP[name];
+  if (heavyGroup && !heavyGroupReady(heavyGroup)) {
+    syncHeavyAuditUiState();
+    renderHeavyPanelState(name, heavyGroup);
+    if (!heavyAuditUiState.errors.has(heavyGroup)) ensureHeavyAuditGroups([heavyGroup]).catch(() => {});
+    return true;
+  }
 
   if (!Array.isArray(state.uiErrors)) state.uiErrors = [];
   state.uiErrors = state.uiErrors.filter((item) => item && item.section !== name);
@@ -152,6 +316,8 @@ function cancelBackgroundOperation(type, operationId) {
 }
 
 function releasePageScopedState() {
+  resetHeavyAuditUiState();
+
   if (typeof linkCheckState !== 'undefined' && linkCheckState) {
     cancelBackgroundOperation('seoInspector.cancelLinks', linkCheckState.operationId);
     linkCheckState.pageUrl = '';
@@ -244,9 +410,10 @@ document.getElementById('copyIssuesButton').addEventListener('click', async () =
   await navigator.clipboard.writeText(lines.join('\n')).catch((error) => handleAsyncUiFailure('copy-issues', error));
 });
 
-document.getElementById('exportButton').addEventListener('click', () => {
+document.getElementById('exportButton').addEventListener('click', async () => {
   if (!state.report) return;
   try {
+    await ensureHeavyAuditGroups(['performance', 'content', 'security']);
     const payload = JSON.stringify(state.report, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const url = URL.createObjectURL(blob);

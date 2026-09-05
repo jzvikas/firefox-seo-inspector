@@ -17,12 +17,21 @@ function node() {
     classList: { toggle() {} },
     addEventListener() {},
     appendChild() {},
+    removeChild() {},
     click() {},
+    firstChild: null,
   };
 }
 
-test('inactive Inspector panels render lazily and only rerender when dirty', async () => {
+async function flushAsyncUi() {
+  await Promise.resolve();
+  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
+test('inactive Inspector panels render lazily and heavy panels load only on demand', async () => {
   const calls = new Map();
+  const heavyRequests = [];
   const count = (name) => calls.set(name, (calls.get(name) || 0) + 1);
   const panels = new Map();
   const ids = [
@@ -41,13 +50,22 @@ test('inactive Inspector panels render lazily and only rerender when dirty', asy
   const context = vm.createContext({
     console,
     Promise,
+    Map,
+    Set,
     setTimeout,
     URL: Object.assign(URL, {
       createObjectURL() { return 'blob:test'; },
       revokeObjectURL() {},
     }),
     Blob: function Blob() {},
-    state: { report: { evaluation: { issues: [] } }, tabId: 5 },
+    state: {
+      report: {
+        facts: { url: 'https://example.com/' },
+        evaluation: { issues: [] },
+        heavyAudit: { performance: false, content: false, security: false },
+      },
+      tabId: 5,
+    },
     statusCounts,
     crawlerState: { running: false },
     currentActiveTab: { id: 5, url: 'https://example.com/' },
@@ -63,7 +81,21 @@ test('inactive Inspector panels render lazily and only rerender when dirty', asy
         onActivated: { addListener() {} },
         onUpdated: { addListener() {} },
         onRemoved: { addListener() {} },
-        async sendMessage() { return { ok: true }; },
+        async sendMessage(tabId, message) {
+          if (message && message.type === 'seoInspector.analyzeHeavy') {
+            heavyRequests.push({ tabId, groups: Array.isArray(message.groups) ? message.groups.slice() : [] });
+            return {
+              url: 'https://example.com/',
+              groups: { performance: true },
+              pageContext: {},
+              performance: { summary: {} },
+              performanceHints: {},
+              assetAudit: {},
+              thirdPartyAudit: {},
+            };
+          }
+          return { ok: true };
+        },
       },
       runtime: {
         onMessage: { addListener() {} },
@@ -72,6 +104,7 @@ test('inactive Inspector panels render lazily and only rerender when dirty', asy
     },
     setStatus() {},
     el() { return node(); },
+    clear() {},
     refresh: async () => {},
     renderHeader() { count('header'); },
     renderOverview() { count('overview'); },
@@ -105,22 +138,30 @@ test('inactive Inspector panels render lazily and only rerender when dirty', asy
   vm.runInContext('renderAll()', context);
   assert.equal(calls.get('overview'), 1);
   assert.equal(calls.get('performance') || 0, 0);
+  assert.equal(heavyRequests.length, 0);
   assert.equal(calls.get('compare') || 0, 0);
   assert.equal(calls.get('crawler') || 0, 0);
 
   vm.runInContext("activateTab('performance')", context);
+  assert.equal(calls.get('performance') || 0, 0, 'heavy renderer waits for the explicit heavy audit result');
+  assert.equal(heavyRequests.length, 1);
+  assert.equal(heavyRequests[0].tabId, 5);
+  assert.equal(heavyRequests[0].groups.join(','), 'performance');
+  await flushAsyncUi();
   assert.equal(calls.get('performance'), 1);
   assert.equal(calls.get('performance-hints'), 1);
   assert.equal(calls.get('assets'), 1);
   assert.equal(calls.get('third-party'), 1);
 
   vm.runInContext("activateTab('performance')", context);
+  assert.equal(heavyRequests.length, 1, 'cached heavy data is reused for the current page');
   assert.equal(calls.get('performance'), 1);
   assert.equal(calls.get('performance-hints'), 1);
   assert.equal(calls.get('assets'), 1);
   assert.equal(calls.get('third-party'), 1);
 
   vm.runInContext("markPanelDirty('performance'); activateTab('performance')", context);
+  assert.equal(heavyRequests.length, 1, 'rerendering a dirty panel does not refetch unchanged heavy data');
   assert.equal(calls.get('performance'), 2);
   assert.equal(calls.get('performance-hints'), 2);
   assert.equal(calls.get('assets'), 2);
@@ -130,6 +171,7 @@ test('inactive Inspector panels render lazily and only rerender when dirty', asy
   vm.runInContext('renderAll()', context);
   assert.equal(calls.get('overview'), beforeOverview);
   assert.equal(calls.get('performance'), 3);
+  assert.equal(heavyRequests.length, 1);
   assert.equal(calls.get('compare') || 0, 0);
   assert.equal(calls.get('crawler') || 0, 0);
 });

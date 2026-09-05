@@ -96,8 +96,12 @@ async function runOpenTabComparison(tabId) {
   pageCompareState.error = '';
   renderCompare();
   try {
+    await ensureHeavyAuditGroups(['security']);
     const targetReport = await browser.tabs.sendMessage(numericId, { type: 'seoInspector.analyze' });
     if (!targetReport || !targetReport.facts) throw new Error('no-report');
+    const targetHeavy = await browser.tabs.sendMessage(numericId, { type: 'seoInspector.analyzeHeavy', groups: ['security'] });
+    if (!targetHeavy || String(targetHeavy.url || '') !== String(targetReport.facts.url || '')) throw new Error('stale-target');
+    if (targetHeavy.securityAudit) targetReport.securityAudit = targetHeavy.securityAudit;
     pageCompareState.result = PageCompare.compareReports(state.report, targetReport);
     pageCompareState.leftLabel = `Current tab · ${pageCompareCurrentUrl()}`;
     pageCompareState.rightLabel = pageCompareTabLabel(target);

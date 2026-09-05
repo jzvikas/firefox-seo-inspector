@@ -76,8 +76,9 @@ function currentSnapshotPage() {
   return SnapshotHistory.pageFor(snapshotUiState.history, snapshotCurrentUrl());
 }
 
-function currentRegressionSnapshot() {
+async function currentRegressionSnapshot() {
   if (!state.report) return null;
+  await ensureHeavyAuditGroups(['performance', 'security']);
   const imageNetworkResults = imageNetworkState.response && Array.isArray(imageNetworkState.response.results)
     ? imageNetworkState.response.results
     : [];
@@ -87,18 +88,22 @@ function currentRegressionSnapshot() {
   });
 }
 
-function applySnapshotComparison(record) {
+async function applySnapshotComparison(record) {
   if (!record || !state.report) return;
-  const current = currentRegressionSnapshot();
+  const current = await currentRegressionSnapshot();
   snapshotUiState.comparedId = record.id;
   snapshotUiState.regression = Regression.analyze(record.snapshot, current);
   state.snapshotDiff = snapshotUiState.regression.changes;
 }
 
-function compareSnapshotRecord(record) {
+async function compareSnapshotRecord(record) {
   if (!record || !state.report) return;
-  applySnapshotComparison(record);
-  snapshotSetMessage(`Comparing current page with “${record.name}”.`, 'ok');
+  try {
+    await applySnapshotComparison(record);
+    snapshotSetMessage(`Comparing current page with “${record.name}”.`, 'ok');
+  } catch (_error) {
+    snapshotSetMessage('Could not load the current performance/security data required for a complete regression comparison.', 'critical');
+  }
   renderCompare();
 }
 
@@ -107,7 +112,8 @@ async function saveSnapshot(name) {
   snapshotUiState.schemaStatus = await requireWritableStorageSchema();
   const url = snapshotCurrentUrl();
   if (!url) return;
-  const snapshot = currentRegressionSnapshot();
+  const snapshot = await currentRegressionSnapshot();
+  if (!snapshot) throw new Error('Snapshot audit data is unavailable.');
   const added = SnapshotHistory.addSnapshot(snapshotUiState.history, url, snapshot, {
     id: snapshotRecordId(),
     name,
@@ -115,7 +121,7 @@ async function saveSnapshot(name) {
   });
   snapshotUiState.history = added.history;
   await persistSnapshotHistory();
-  applySnapshotComparison(added.record);
+  await applySnapshotComparison(added.record);
   snapshotSetMessage(`Saved “${added.record.name}”.`, 'ok');
   renderCompare();
 }
@@ -219,7 +225,7 @@ function appendSnapshotControls(panel) {
   if (baseline) {
     const compareBaseline = el('button', '', 'Compare baseline');
     compareBaseline.type = 'button';
-    compareBaseline.addEventListener('click', () => compareSnapshotRecord(baseline));
+    compareBaseline.addEventListener('click', () => compareSnapshotRecord(baseline).catch(() => {}));
     controls.appendChild(compareBaseline);
   }
 
@@ -246,7 +252,7 @@ function appendSnapshotControls(panel) {
 
   saveCard.appendChild(controls);
   saveCard.appendChild(el('div', 'muted', `Local-only history · max ${SnapshotHistory.MAX_SNAPSHOTS_PER_URL} snapshots per exact normalized URL · imports merge by snapshot ID.`));
-  saveCard.appendChild(el('div', 'muted', 'Regression snapshots include SEO, indexability, headings, schema, hreflang, HTTP, performance, and security summaries. Broken-link/image network counts are recorded only when those on-demand checks have actually run.'));
+  saveCard.appendChild(el('div', 'muted', 'Regression snapshots include SEO, indexability, headings, schema, hreflang, HTTP, performance, and security summaries. Performance/security data is loaded locally only when a snapshot comparison or save explicitly needs it. Broken-link/image network counts are recorded only when those on-demand checks have actually run.'));
   panel.appendChild(saveCard);
 }
 
@@ -279,7 +285,7 @@ function appendSnapshotTable(panel) {
     const compare = el('button', '', snapshotUiState.comparedId === record.id ? 'Compared' : 'Compare');
     compare.type = 'button';
     compare.disabled = snapshotUiState.comparedId === record.id;
-    compare.addEventListener('click', () => compareSnapshotRecord(record));
+    compare.addEventListener('click', () => compareSnapshotRecord(record).catch(() => {}));
     actionsCell.appendChild(compare);
 
     const baseline = el('button', '', page.baselineId === record.id ? 'Clear baseline' : 'Set baseline');
