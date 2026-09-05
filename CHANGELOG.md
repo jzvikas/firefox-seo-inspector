@@ -11,6 +11,9 @@ All notable changes to this project are documented here.
 - Largest-resource and slowest-resource rankings plus a bounded Resource Timing table for up to 1,000 subresource entries.
 - Performance resource classification for HTML, JavaScript, CSS, images, fonts, Fetch/XHR, media, and other resources, with first-party/third-party attribution.
 - Automated tests for resource classification, byte accounting, third-party detection, navigation timing, DOM depth/counting, ranking, unknown-size handling, and safety caps.
+- Local web-performance hint engine with a likely initial-viewport LCP candidate, CLS/layout-shift risk hints, missing image dimensions, above-fold lazy-loading warnings, and large below-fold eager-loading warnings.
+- Inspection of preload/modulepreload, preconnect, prefetch, DNS-prefetch, render-blocking stylesheet/script candidates, observed font resources, and font preload/crossorigin relationships without additional network requests.
+- Automated tests for viewport classification, reserved dimensions, image loading hints, LCP candidate selection, resource hints, render-blocking rules, font preload matching, and deterministic issue summaries.
 
 ## [0.2.0] - 2026-09-05
 

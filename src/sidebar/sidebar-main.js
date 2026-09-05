@@ -5,6 +5,7 @@ function renderAll() {
   renderOverview();
   renderIndexability();
   renderPerformance();
+  renderPerformanceHints();
   renderSerp();
   renderHreflang();
   renderIssues();
