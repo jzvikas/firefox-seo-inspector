@@ -28,17 +28,19 @@ test('every sidebar script and stylesheet reference exists on disk', () => {
   }
 });
 
-test('page type custom rules profiles multi-tab and crawler models load before renderers and main', () => {
+test('page type product custom rules profiles multi-tab and crawler models load before renderers and main', () => {
   const html = fs.readFileSync(sidebarPath, 'utf8');
   const scripts = scriptSources(html);
   const customRules = scripts.indexOf('../lib/custom-rules.js');
   const domainProfiles = scripts.indexOf('../lib/domain-profiles.js');
   const pageType = scripts.indexOf('../lib/page-type.js');
   const pageTypeDom = scripts.indexOf('../lib/page-type-dom.js');
+  const productModel = scripts.indexOf('../lib/product-page-audit.js');
   const multiTabModel = scripts.indexOf('../lib/multi-tab-audit.js');
   const crawlerModel = scripts.indexOf('../lib/crawler-lite.js');
   const sidebarBase = scripts.indexOf('sidebar-base.js');
   const pageTypeRenderer = scripts.indexOf('sidebar-page-type.js');
+  const productRenderer = scripts.indexOf('sidebar-product.js');
   const imagesNetwork = scripts.indexOf('sidebar-images-network.js');
   const imagesRules = scripts.indexOf('sidebar-images-rules.js');
   const rules = scripts.indexOf('sidebar-rules.js');
@@ -50,10 +52,12 @@ test('page type custom rules profiles multi-tab and crawler models load before r
   assert.ok(domainProfiles > customRules);
   assert.ok(pageType >= 0);
   assert.ok(pageTypeDom > pageType);
+  assert.ok(productModel > pageTypeDom);
   assert.ok(multiTabModel >= 0);
   assert.ok(crawlerModel >= 0);
-  assert.ok(sidebarBase > pageTypeDom);
+  assert.ok(sidebarBase > productModel);
   assert.ok(pageTypeRenderer > sidebarBase);
+  assert.ok(productRenderer > sidebarBase);
   assert.ok(imagesNetwork >= 0);
   assert.ok(imagesRules > imagesNetwork);
   assert.ok(rules > customRules);
@@ -62,6 +66,7 @@ test('page type custom rules profiles multi-tab and crawler models load before r
   assert.ok(multiTab > multiTabModel);
   assert.ok(crawler > crawlerModel);
   assert.ok(main > pageTypeRenderer);
+  assert.ok(main > productRenderer);
   assert.ok(main > rules);
   assert.ok(main > profiles);
   assert.ok(main > multiTab);
@@ -69,9 +74,12 @@ test('page type custom rules profiles multi-tab and crawler models load before r
   assert.ok(main > imagesRules);
 });
 
-test('Rules Profiles Tabs and Crawler panels stay in sync with renderAll', () => {
+test('Product Rules Profiles Tabs and Crawler panels stay in sync with renderAll', () => {
   const html = fs.readFileSync(sidebarPath, 'utf8');
   const main = read('src/sidebar/sidebar-main.js');
+  assert.match(html, /data-tab="product"/);
+  assert.match(html, /<section id="product" class="panel"><\/section>/);
+  assert.match(main, /\brenderProduct\(\);/);
   assert.match(html, /data-tab="rules"/);
   assert.match(html, /<section id="rules" class="panel"><\/section>/);
   assert.match(main, /\brenderRules\(\);/);
@@ -86,22 +94,24 @@ test('Rules Profiles Tabs and Crawler panels stay in sync with renderAll', () =>
   assert.match(main, /\brenderCrawler\(\);/);
 });
 
-test('content script loads page type and policy dependencies before content bootstrap', () => {
+test('content script loads page type product and policy dependencies before content bootstrap', () => {
   const manifest = JSON.parse(read('src/manifest.json'));
   const scripts = manifest.content_scripts[0].js;
   const rules = scripts.indexOf('lib/custom-rules.js');
   const profiles = scripts.indexOf('lib/domain-profiles.js');
   const pageType = scripts.indexOf('lib/page-type.js');
   const pageTypeDom = scripts.indexOf('lib/page-type-dom.js');
+  const productAudit = scripts.indexOf('lib/product-page-audit.js');
   const content = scripts.indexOf('content/content.js');
   assert.ok(rules >= 0);
   assert.ok(profiles > rules);
   assert.ok(pageType > profiles);
   assert.ok(pageTypeDom > pageType);
-  assert.ok(content > pageTypeDom);
+  assert.ok(productAudit > pageTypeDom);
+  assert.ok(content > productAudit);
 });
 
-test('crawler background is registered and page type adds no new permission', () => {
+test('crawler background is registered and page type/product audit add no new permission', () => {
   const manifest = JSON.parse(read('src/manifest.json'));
   assert.ok(manifest.background.scripts.includes('background/crawler-background.js'));
   assert.deepEqual(manifest.permissions.slice().sort(), ['storage', 'tabs', 'webRequest']);

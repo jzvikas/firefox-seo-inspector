@@ -285,12 +285,12 @@ Goal: move from single-page inspection to small-site and e-commerce workflows wi
 
 ### Product-page checks
 
-- [ ] Product schema quality.
-- [ ] Name, image, SKU, GTIN, brand, price, currency, availability, rating, and review checks.
-- [ ] Product canonical.
-- [ ] Breadcrumb schema.
-- [ ] Variant URL/canonical warnings.
-- [ ] Out-of-stock handling hints.
+- [x] Product schema quality.
+- [x] Name, image, SKU, GTIN, brand, price, currency, availability, rating, and review checks.
+- [x] Product canonical.
+- [x] Breadcrumb schema.
+- [x] Variant URL/canonical warnings.
+- [x] Out-of-stock handling hints.
 
 ### Category/listing checks
 

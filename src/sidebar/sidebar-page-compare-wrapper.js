@@ -46,6 +46,7 @@ reportFromFetchedCompare = async function reportFromFetchedCompareWithDocumentBa
   const facts = PageExtractor.extract(doc, url, { performance: null });
   facts.pageSignals = PageTypeDom.collect(doc, facts.url);
   const pageType = PageType.detect(facts, responseMeta);
+  const productAudit = ProductPageAudit.inspect(facts, pageType);
   const policy = await loadCompareAuditPolicy(url.href);
   const rulesConfig = CustomRules.normalize(policy.rules);
   const baseEvaluation = SeoCore.evaluateFacts(facts, responseMeta, CustomRules.toSeoCoreOptions(rulesConfig));
@@ -62,6 +63,7 @@ reportFromFetchedCompare = async function reportFromFetchedCompareWithDocumentBa
     facts,
     evaluation,
     pageType,
+    productAudit,
     responseMeta,
     securityResponseMeta,
     customRules: rulesConfig,

@@ -1,6 +1,6 @@
-# Firefox SEO Inspector
+# SEO Inspector
 
-Firefox SEO Inspector is a local-first technical SEO inspector for Firefox. It opens in a separate movable and resizable browser window so the inspected website keeps its normal width, and it does not send inspected page data to a third-party service.
+SEO Inspector is a local-first technical SEO inspector for Firefox. It opens in a separate movable and resizable browser window so the inspected website keeps its normal width, and it does not send inspected page data to a third-party service.
 
 ## Current release: v0.2.0
 
@@ -55,7 +55,7 @@ Firefox SEO Inspector is a local-first technical SEO inspector for Firefox. It o
 ### Existing inspection tools
 
 - Heading tree with in-page highlighting.
-- JSON-LD parsing with schema type detection, invalid JSON warnings, and basic Product checks.
+- JSON-LD parsing with schema type detection and invalid JSON warnings.
 - Open Graph and Twitter/X card metadata inspection.
 - JSON report export and copyable issue list.
 - No telemetry, analytics, remote runtime scripts, accounts, or backend.
@@ -215,9 +215,17 @@ Firefox SEO Inspector is a local-first technical SEO inspector for Firefox. It o
 - Uses local HTTP status, URL, JSON-LD, Open Graph, microdata, semantic DOM, search controls, and pagination signals without extra page-type network requests.
 - Page type is visible in Overview and carried through raw/URL comparisons, Tabs, Crawler Lite, filters, sorting, and CSV/JSON exports. See [PAGE_TYPE.md](PAGE_TYPE.md).
 
+### Product-page checks
+
+- Dedicated **Product** panel for Product/ProductGroup JSON-LD quality, commerce fields, canonical/variant relationships, breadcrumbs, and availability handling.
+- Checks name, image, SKU, GTIN, brand, Offer/AggregateOffer price and currency, availability, aggregate rating, and review signals without pretending every optional identifier/review field is mandatory.
+- Detects missing/multiple/cross-origin/unexpected product canonicals and generic variant-like URL/canonical relationships, including ProductGroup pages that canonicalize to one nested variant.
+- Shows out-of-stock/discontinued signals and warns when an out-of-stock product is also `noindex`, while keeping stock-handling guidance advisory rather than forcing one strategy.
+- Product analysis is platform-neutral, performs no additional request, is included in rendered/raw/URL/crawler reports, and adds no browser permission. See [PRODUCT_PAGE.md](PRODUCT_PAGE.md).
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. Richer global/URL/selector ignore-rule management remains open; the next Top-15 multi-page milestone is **Product-page checks**.
+See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. Richer global/URL/selector ignore-rule management remains open; the next Top-15 e-commerce milestone is **Faceted navigation and pagination checks**.
 
 ## Install for development
 
@@ -227,7 +235,7 @@ Requires Firefox 142 or newer.
 2. Open `about:debugging#/runtime/this-firefox` in Firefox.
 3. Choose **Load Temporary Add-on**.
 4. Select `src/manifest.json`.
-5. Open an HTTP/HTTPS page and click the extension toolbar icon. Firefox SEO Inspector opens in a separate movable/resizable window.
+5. Open an HTTP/HTTPS page and click the extension toolbar icon. SEO Inspector opens in a separate movable/resizable window.
 6. After source changes, use **Reload** for the temporary extension in `about:debugging`; you do not need to select the manifest again.
 
 A prebuilt unsigned package is also kept in `dist/` as `seo-inspector-<version>.xpi`. Stable Firefox generally requires signing for permanent installation; the source can always be loaded temporarily for development.
@@ -243,6 +251,8 @@ The Performance panel reads the browser's local Navigation Timing and Resource T
 The Content panel performs a bounded local DOM scan and does not make network requests during normal inspection. Hidden-content output is limited to technical visibility signals and bounded element labels; it does not infer spam or intent.
 
 The Security panel reads current-page DOM/resource references plus selected security headers already observed on the main document. It does not fetch external security databases or issue extra security-audit requests. Cookie Secure/HttpOnly/SameSite inspection is not enabled, so the extension does not request cookie access for this feature.
+
+The Product panel reuses the already-extracted page URL, canonical/robots facts, page-type result, and parsed JSON-LD. It performs no additional network request and does not add permissions. Product fields and findings stay in the local Inspector report.
 
 Snapshot history, regression summaries, custom audit rules, and domain profiles are stored only in `browser.storage.local`. Snapshot history is capped at 50 records per exact normalized URL. Regression snapshots store bounded summaries rather than full performance/resource inventories, and on-demand network status counts are included only when those checks actually ran. Custom rules contain policy values only. Domain profiles contain the hostname plus local policy/expectation values and are capped at 200 records. None of this data is uploaded by the extension.
 

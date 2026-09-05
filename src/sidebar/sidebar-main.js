@@ -16,6 +16,7 @@ function renderAll() {
   renderHeadings();
   renderLinks();
   renderImagesNetwork();
+  renderProduct();
   renderSchema();
   renderSocial();
   renderCompare();
@@ -67,4 +68,4 @@ window.addEventListener('unload', () => {
   if (crawlerState && crawlerState.running) browser.runtime.sendMessage({ type: 'seoInspector.crawler.cancel', scanId: String(crawlerState.scanId) }).catch(() => {});
 });
 
-refresh().catch(() => setStatus('Unable to start', 'Try reopening the sidebar.'));
+refresh().catch(() => setStatus('Unable to start', 'Try reopening the Inspector window.'));
