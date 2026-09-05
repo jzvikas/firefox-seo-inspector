@@ -404,15 +404,15 @@ function releasePageScopedState() {
 document.querySelectorAll('.tab').forEach((button) => button.addEventListener('click', () => activateTab(button.dataset.tab)));
 document.getElementById('refreshButton').addEventListener('click', () => { refreshSafely('refresh-button'); });
 
-document.getElementById('copyIssuesButton').addEventListener('click', async () => {
+document.getElementById('copyIssuesButton').addEventListener('click', () => {
   if (!state.report) return;
   const lines = state.report.evaluation.issues.map((item) => `[${item.severity.toUpperCase()}] ${item.title}: ${item.message}`);
-  await navigator.clipboard.writeText(lines.join('\n')).catch((error) => handleAsyncUiFailure('copy-issues', error));
+  navigator.clipboard.writeText(lines.join('\n')).catch((error) => handleAsyncUiFailure('copy-issues', error));
 });
 
-document.getElementById('exportButton').addEventListener('click', async () => {
-  if (!state.report) return;
-  try {
+document.getElementById('exportButton').addEventListener('click', () => {
+  (async () => {
+    if (!state.report) return;
     await ensureHeavyAuditGroups(['performance', 'content', 'security']);
     const payload = JSON.stringify(state.report, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
@@ -422,9 +422,7 @@ document.getElementById('exportButton').addEventListener('click', async () => {
     anchor.download = 'seo-inspector-report.json';
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (error) {
-    handleAsyncUiFailure('export-report', error);
-  }
+  })().catch((error) => handleAsyncUiFailure('export-report', error));
 });
 
 browser.tabs.onActivated.addListener(() => { refreshSafely('tab-activated'); });
