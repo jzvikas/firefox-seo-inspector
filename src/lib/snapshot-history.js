@@ -55,9 +55,13 @@
 
   function sanitizeRecord(value, url, index) {
     if (!value || typeof value !== 'object') return null;
-    const normalizedUrl = normalizeUrl(url || value.url || (value.snapshot && value.snapshot.url));
+    const hasSnapshot = Object.prototype.hasOwnProperty.call(value, 'snapshot');
+    const hasData = Object.prototype.hasOwnProperty.call(value, 'data');
+    const rawSnapshot = hasSnapshot ? value.snapshot : hasData ? value.data : value;
+    if (!rawSnapshot || typeof rawSnapshot !== 'object') return null;
+    const normalizedUrl = normalizeUrl(url || value.url || rawSnapshot.url);
     if (!normalizedUrl) return null;
-    const snapshot = sanitizeSnapshot(value.snapshot || value.data || value, normalizedUrl);
+    const snapshot = sanitizeSnapshot(rawSnapshot, normalizedUrl);
     if (!snapshot) return null;
     const createdAt = safeIso(value.createdAt || snapshot.savedAt);
     const fallbackId = `import-${createdAt}-${index || 0}`;
