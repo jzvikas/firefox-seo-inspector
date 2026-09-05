@@ -1,5 +1,12 @@
 'use strict';
 
+const PERFORMANCE_RESOURCE_BATCH = 100;
+const PERFORMANCE_RESOURCE_MAX = 500;
+const performanceRenderState = {
+  pageUrl: '',
+  resourceLimit: PERFORMANCE_RESOURCE_BATCH,
+};
+
 function performanceBytes(value) {
   const bytes = Number(value) || 0;
   if (!bytes) return '0 B';
@@ -30,6 +37,21 @@ function performanceKindLabel(kind) {
     other: 'Other',
   };
   return labels[kind] || kind || 'Other';
+}
+
+function syncPerformanceRenderState(pageUrlValue) {
+  const value = String(pageUrlValue || '');
+  if (performanceRenderState.pageUrl === value) return;
+  performanceRenderState.pageUrl = value;
+  performanceRenderState.resourceLimit = PERFORMANCE_RESOURCE_BATCH;
+}
+
+function rerenderPerformanceGroup() {
+  if (typeof renderPanel === 'function') {
+    renderPanel('performance', { force: true });
+    return;
+  }
+  renderPerformance();
 }
 
 function renderPerformanceResourceTable(panel, title, resources, limit) {
@@ -70,11 +92,37 @@ function renderPerformanceResourceTable(panel, title, resources, limit) {
   panel.appendChild(cardNode);
 }
 
+function appendPerformanceResourcePager(container, total) {
+  const renderCap = Math.min(total, PERFORMANCE_RESOURCE_MAX);
+  const shown = Math.min(performanceRenderState.resourceLimit, renderCap);
+  if (shown < renderCap) {
+    const controls = el('div', 'toolbar');
+    const next = Math.min(PERFORMANCE_RESOURCE_BATCH, renderCap - shown);
+    const more = el('button', '', `Show next ${next} resources`);
+    more.type = 'button';
+    more.addEventListener('click', () => {
+      performanceRenderState.resourceLimit = Math.min(
+        PERFORMANCE_RESOURCE_MAX,
+        performanceRenderState.resourceLimit + PERFORMANCE_RESOURCE_BATCH,
+      );
+      rerenderPerformanceGroup();
+    });
+    controls.appendChild(more);
+    controls.appendChild(el('span', 'muted', `Rendering ${shown} of ${total} Resource Timing rows.`));
+    container.appendChild(controls);
+    return;
+  }
+  if (total > PERFORMANCE_RESOURCE_MAX) {
+    container.appendChild(el('div', 'muted', `Rendering is capped at ${PERFORMANCE_RESOURCE_MAX} of ${total} Resource Timing rows to keep the Inspector responsive. Full captured data remains in the report and exports.`));
+  }
+}
+
 function renderPerformance() {
   const panel = document.getElementById('performance');
   clear(panel);
   if (!state.report) return panel.appendChild(el('div', 'empty', 'No audit data.'));
 
+  syncPerformanceRenderState(state.report.facts && state.report.facts.url);
   const report = state.report.performance;
   if (!report) {
     panel.appendChild(el('div', 'empty', 'Performance timing data is unavailable. Reload the page after updating the extension.'));
@@ -146,7 +194,8 @@ function renderPerformance() {
     head.appendChild(hrow);
     table.appendChild(head);
     const body = document.createElement('tbody');
-    resources.slice(0, 500).forEach((item) => {
+    const renderLimit = Math.min(performanceRenderState.resourceLimit, PERFORMANCE_RESOURCE_MAX);
+    resources.slice(0, renderLimit).forEach((item) => {
       const row = document.createElement('tr');
       row.appendChild(el('td', '', performanceKindLabel(item.kind)));
       row.appendChild(el('td', '', performanceMs(item.startTime)));
@@ -159,7 +208,7 @@ function renderPerformance() {
     table.appendChild(body);
     wrap.appendChild(table);
     full.appendChild(wrap);
-    if (resources.length > 500) full.appendChild(el('div', 'muted', `Showing first 500 of ${resources.length} entries.`));
+    appendPerformanceResourcePager(full, resources.length);
   }
   panel.appendChild(full);
 

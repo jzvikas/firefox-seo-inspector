@@ -1,5 +1,8 @@
 'use strict';
 
+const SIMPLE_RENDER_BATCH = 100;
+const SIMPLE_RENDER_MAX = 500;
+
 const state = {
   tabId: null,
   report: null,
@@ -14,6 +17,10 @@ const state = {
   sitemapChecking: false,
   sitemapOperationId: null,
   issueFilter: 'all',
+  inventoryLimits: {
+    issues: SIMPLE_RENDER_BATCH,
+    headings: SIMPLE_RENDER_BATCH,
+  },
 };
 
 const pageUrl = document.getElementById('pageUrl');
@@ -57,6 +64,33 @@ function setStatus(message, detail) {
   statusCounts.textContent = detail || '';
 }
 
+function resetSimpleInventoryLimits() {
+  state.inventoryLimits.issues = SIMPLE_RENDER_BATCH;
+  state.inventoryLimits.headings = SIMPLE_RENDER_BATCH;
+}
+
+function appendSimpleInventoryPager(container, key, total, label, rerender) {
+  const renderCap = Math.min(total, SIMPLE_RENDER_MAX);
+  const shown = Math.min(state.inventoryLimits[key] || SIMPLE_RENDER_BATCH, renderCap);
+  if (shown < renderCap) {
+    const controls = el('div', 'toolbar');
+    const next = Math.min(SIMPLE_RENDER_BATCH, renderCap - shown);
+    const more = el('button', '', `Show next ${next} ${label}`);
+    more.type = 'button';
+    more.addEventListener('click', () => {
+      state.inventoryLimits[key] = Math.min(SIMPLE_RENDER_MAX, shown + SIMPLE_RENDER_BATCH);
+      rerender();
+    });
+    controls.appendChild(more);
+    controls.appendChild(el('span', 'muted', `Rendering ${shown} of ${total} ${label}.`));
+    container.appendChild(controls);
+    return;
+  }
+  if (total > SIMPLE_RENDER_MAX) {
+    container.appendChild(el('div', 'muted', `Rendering is capped at ${SIMPLE_RENDER_MAX} of ${total} ${label} to keep the Inspector responsive. Full audit data remains in the report and exports.`));
+  }
+}
+
 async function activeTab() {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   return tabs[0] || null;
@@ -79,6 +113,7 @@ async function refresh() {
   state.sitemapReport = null;
   state.sitemapChecking = false;
   state.sitemapOperationId = null;
+  resetSimpleInventoryLimits();
   pageUrl.textContent = tab && tab.url ? tab.url : '';
   pageUrl.title = tab && tab.url ? tab.url : '';
 
@@ -205,7 +240,11 @@ function renderIssues() {
     const button = el('button', '', label);
     button.type = 'button';
     if (state.issueFilter === value) button.disabled = true;
-    button.addEventListener('click', () => { state.issueFilter = value; renderIssues(); });
+    button.addEventListener('click', () => {
+      state.issueFilter = value;
+      state.inventoryLimits.issues = SIMPLE_RENDER_BATCH;
+      renderIssues();
+    });
     toolbar.appendChild(button);
   }
   const clearButton = el('button', '', 'Clear highlights');
@@ -214,8 +253,13 @@ function renderIssues() {
   toolbar.appendChild(clearButton);
   panel.appendChild(toolbar);
   const items = state.report.evaluation.issues.filter((item) => state.issueFilter === 'all' || item.severity === state.issueFilter);
-  if (!items.length) panel.appendChild(el('div', 'empty', 'No issues in this filter.'));
-  else items.forEach((item) => panel.appendChild(issueNode(item)));
+  if (!items.length) {
+    panel.appendChild(el('div', 'empty', 'No issues in this filter.'));
+    return;
+  }
+  const renderLimit = Math.min(state.inventoryLimits.issues, SIMPLE_RENDER_MAX);
+  items.slice(0, renderLimit).forEach((item) => panel.appendChild(issueNode(item)));
+  appendSimpleInventoryPager(panel, 'issues', items.length, 'issues', renderIssues);
 }
 
 function renderHeadings() {
@@ -226,7 +270,8 @@ function renderHeadings() {
   if (!headings.length) return panel.appendChild(el('div', 'empty', 'No headings found.'));
   const cardNode = el('div', 'card');
   cardNode.appendChild(el('div', 'card-header', `${headings.length} headings`));
-  headings.forEach((item) => {
+  const renderLimit = Math.min(state.inventoryLimits.headings, SIMPLE_RENDER_MAX);
+  headings.slice(0, renderLimit).forEach((item) => {
     const row = el('div', 'heading');
     row.style.paddingLeft = `${8 + Math.max(0, item.level - 1) * 14}px`;
     const button = el('button', '', `H${item.level}  ${item.text || '(empty)'}`);
@@ -235,6 +280,7 @@ function renderHeadings() {
     row.appendChild(button);
     cardNode.appendChild(row);
   });
+  appendSimpleInventoryPager(cardNode, 'headings', headings.length, 'headings', renderHeadings);
   panel.appendChild(cardNode);
 }
 

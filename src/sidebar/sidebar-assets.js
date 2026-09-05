@@ -1,5 +1,43 @@
 'use strict';
 
+const ASSET_RENDER_BATCH = 100;
+const ASSET_RENDER_MAX = 300;
+const assetRenderState = {
+  pageUrl: '',
+  scripts: ASSET_RENDER_BATCH,
+  stylesheets: ASSET_RENDER_BATCH,
+};
+
+function syncAssetRenderState(pageUrlValue) {
+  const value = String(pageUrlValue || '');
+  if (assetRenderState.pageUrl === value) return;
+  assetRenderState.pageUrl = value;
+  assetRenderState.scripts = ASSET_RENDER_BATCH;
+  assetRenderState.stylesheets = ASSET_RENDER_BATCH;
+}
+
+function appendAssetPager(container, key, total, label) {
+  const cap = Math.min(total, ASSET_RENDER_MAX);
+  const shown = Math.min(assetRenderState[key] || ASSET_RENDER_BATCH, cap);
+  if (shown < cap) {
+    const controls = el('div', 'toolbar');
+    const next = Math.min(ASSET_RENDER_BATCH, cap - shown);
+    const more = el('button', '', `Show next ${next} ${label}`);
+    more.type = 'button';
+    more.addEventListener('click', () => {
+      assetRenderState[key] = Math.min(ASSET_RENDER_MAX, shown + ASSET_RENDER_BATCH);
+      rerenderPerformanceGroup();
+    });
+    controls.appendChild(more);
+    controls.appendChild(el('span', 'muted', `Rendering ${shown} of ${total} ${label}.`));
+    container.appendChild(controls);
+    return;
+  }
+  if (total > ASSET_RENDER_MAX) {
+    container.appendChild(el('div', 'muted', `Rendering is capped at ${ASSET_RENDER_MAX} of ${total} ${label} to keep the Inspector responsive. Full asset data remains in the report.`));
+  }
+}
+
 function assetSizeLabel(item) {
   if (!item || !item.sizeKnown) return 'Unknown';
   return performanceBytes(item.sizeBytes);
@@ -43,7 +81,7 @@ function appendAssetIssues(panel, issues) {
   if (!Array.isArray(issues) || !issues.length) {
     cardNode.appendChild(el('div', 'empty', 'No configured JavaScript/CSS asset warnings were triggered.'));
   } else {
-    issues.forEach((issue) => {
+    issues.slice(0, 100).forEach((issue) => {
       const node = el('div', `issue ${issue.severity || 'warning'}`);
       const title = el('div', 'issue-title');
       title.appendChild(el('span', '', issue.title || issue.code || 'Asset warning'));
@@ -52,6 +90,7 @@ function appendAssetIssues(panel, issues) {
       node.appendChild(el('div', 'issue-message', issue.message || ''));
       cardNode.appendChild(node);
     });
+    if (issues.length > 100) cardNode.appendChild(el('div', 'muted', `Showing first 100 of ${issues.length} asset issues.`));
   }
   panel.appendChild(cardNode);
 }
@@ -65,6 +104,7 @@ function renderAssetAudit() {
     return;
   }
 
+  syncAssetRenderState(state.report.facts && state.report.facts.url);
   const scripts = Array.isArray(report.scripts) ? report.scripts : [];
   const stylesheets = Array.isArray(report.stylesheets) ? report.stylesheets : [];
   const inlineStyles = Array.isArray(report.inlineStyles) ? report.inlineStyles : [];
@@ -92,7 +132,8 @@ function renderAssetAudit() {
   if (!scripts.length) {
     jsCard.appendChild(el('div', 'empty', 'No script elements found.'));
   } else {
-    const rows = scripts.slice(0, 300).map((script) => [
+    const scriptLimit = Math.min(assetRenderState.scripts, ASSET_RENDER_MAX);
+    const rows = scripts.slice(0, scriptLimit).map((script) => [
       script.inline ? 'inline' : 'external',
       assetFlags(script),
       script.external ? (script.thirdParty ? '3rd-party' : '1st-party') : 'inline',
@@ -101,7 +142,7 @@ function renderAssetAudit() {
       script.external ? script.url || '—' : `inline script #${script.index + 1}`,
     ]);
     appendAssetTable(jsCard, ['Kind', 'Flags', 'Origin', 'Size', 'Time', 'Resource'], rows, 5);
-    if (scripts.length > 300) jsCard.appendChild(el('div', 'muted', `Showing first 300 of ${scripts.length} scripts.`));
+    appendAssetPager(jsCard, 'scripts', scripts.length, 'scripts');
   }
   jsCard.appendChild(el('div', 'muted', 'Inline script source is not copied into this inventory; only its character count and loading metadata are retained.'));
   panel.appendChild(jsCard);
@@ -111,7 +152,8 @@ function renderAssetAudit() {
   if (!stylesheets.length) {
     cssCard.appendChild(el('div', 'empty', 'No external stylesheets found.'));
   } else {
-    const rows = stylesheets.slice(0, 300).map((sheet) => [
+    const stylesheetLimit = Math.min(assetRenderState.stylesheets, ASSET_RENDER_MAX);
+    const rows = stylesheets.slice(0, stylesheetLimit).map((sheet) => [
       sheet.media || 'all',
       sheet.disabled ? 'disabled' : 'enabled',
       sheet.thirdParty ? '3rd-party' : '1st-party',
@@ -120,7 +162,7 @@ function renderAssetAudit() {
       sheet.url || '—',
     ]);
     appendAssetTable(cssCard, ['Media', 'State', 'Origin', 'Size', 'Time', 'Resource'], rows, 5);
-    if (stylesheets.length > 300) cssCard.appendChild(el('div', 'muted', `Showing first 300 of ${stylesheets.length} stylesheets.`));
+    appendAssetPager(cssCard, 'stylesheets', stylesheets.length, 'stylesheets');
   }
   if (inlineStyles.length) {
     const totalInlineBytes = inlineStyles.reduce((sum, item) => sum + (Number(item.bytes) || 0), 0);
@@ -134,7 +176,10 @@ function renderAssetAudit() {
   (report.duplicateScripts || []).forEach((item) => duplicateRows.push(['JavaScript', `${item.count}×`, item.url]));
   (report.duplicateStylesheets || []).forEach((item) => duplicateRows.push(['CSS', `${item.count}×`, item.url]));
   if (!duplicateRows.length) duplicateCard.appendChild(el('div', 'empty', 'No duplicate external JavaScript or stylesheet URLs found.'));
-  else appendAssetTable(duplicateCard, ['Type', 'Count', 'URL'], duplicateRows.slice(0, 200), 2);
+  else {
+    appendAssetTable(duplicateCard, ['Type', 'Count', 'URL'], duplicateRows.slice(0, 100), 2);
+    if (duplicateRows.length > 100) duplicateCard.appendChild(el('div', 'muted', `Showing first 100 of ${duplicateRows.length} duplicate asset groups.`));
+  }
   panel.appendChild(duplicateCard);
 
   const thirdParty = el('div', 'card');
@@ -169,7 +214,10 @@ function renderAssetAudit() {
   });
   large.appendChild(el('div', 'card-header', `Large JS/CSS resources · ${largeItems.length}`));
   if (!largeItems.length) large.appendChild(el('div', 'empty', 'No known-size JS/CSS resources exceed the configured thresholds.'));
-  else appendAssetTable(large, ['Type', 'Size', 'Time', 'URL'], largeItems.slice(0, 100), 3);
+  else {
+    appendAssetTable(large, ['Type', 'Size', 'Time', 'URL'], largeItems.slice(0, 100), 3);
+    if (largeItems.length > 100) large.appendChild(el('div', 'muted', `Showing first 100 of ${largeItems.length} large resources.`));
+  }
   panel.appendChild(large);
 
   panel.appendChild(el('div', 'muted', 'External asset sizes come from existing Resource Timing data. Unknown cross-origin/cache sizes stay unknown; the audit does not fetch assets again.'));

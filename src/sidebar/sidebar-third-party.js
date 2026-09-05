@@ -1,5 +1,19 @@
 'use strict';
 
+const THIRD_PARTY_RENDER_BATCH = 100;
+const THIRD_PARTY_RENDER_MAX = 200;
+const thirdPartyRenderState = {
+  pageUrl: '',
+  hostLimit: THIRD_PARTY_RENDER_BATCH,
+};
+
+function syncThirdPartyRenderState(pageUrlValue) {
+  const value = String(pageUrlValue || '');
+  if (thirdPartyRenderState.pageUrl === value) return;
+  thirdPartyRenderState.pageUrl = value;
+  thirdPartyRenderState.hostLimit = THIRD_PARTY_RENDER_BATCH;
+}
+
 function thirdPartyTypeMix(typeCounts) {
   return Object.entries(typeCounts || {})
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
@@ -31,6 +45,28 @@ function appendThirdPartyTable(container, headers, rows, codeColumnIndexes) {
   container.appendChild(wrap);
 }
 
+function appendThirdPartyPager(container, total) {
+  const cap = Math.min(total, THIRD_PARTY_RENDER_MAX);
+  const shown = Math.min(thirdPartyRenderState.hostLimit, cap);
+  if (shown < cap) {
+    const controls = el('div', 'toolbar');
+    const next = Math.min(THIRD_PARTY_RENDER_BATCH, cap - shown);
+    const more = el('button', '', `Show next ${next} third-party hosts`);
+    more.type = 'button';
+    more.addEventListener('click', () => {
+      thirdPartyRenderState.hostLimit = Math.min(THIRD_PARTY_RENDER_MAX, shown + THIRD_PARTY_RENDER_BATCH);
+      rerenderPerformanceGroup();
+    });
+    controls.appendChild(more);
+    controls.appendChild(el('span', 'muted', `Rendering ${shown} of ${total} third-party hosts.`));
+    container.appendChild(controls);
+    return;
+  }
+  if (total > THIRD_PARTY_RENDER_MAX) {
+    container.appendChild(el('div', 'muted', `Rendering is capped at ${THIRD_PARTY_RENDER_MAX} of ${total} third-party hosts to keep the Inspector responsive. Full grouping remains in the report.`));
+  }
+}
+
 function renderThirdPartyAudit() {
   const panel = document.getElementById('performance');
   if (!panel || !state.report) return;
@@ -40,6 +76,7 @@ function renderThirdPartyAudit() {
     return;
   }
 
+  syncThirdPartyRenderState(state.report.facts && state.report.facts.url);
   const summary = report.summary || {};
   const summaryCard = el('div', 'card');
   summaryCard.appendChild(el('div', 'card-header', 'Third-party resources'));
@@ -74,7 +111,8 @@ function renderThirdPartyAudit() {
   if (!groups.length) {
     domainCard.appendChild(el('div', 'empty', 'No third-party hosts found in local Resource Timing data.'));
   } else {
-    const rows = groups.slice(0, 200).map((group) => [
+    const renderLimit = Math.min(thirdPartyRenderState.hostLimit, THIRD_PARTY_RENDER_MAX);
+    const rows = groups.slice(0, renderLimit).map((group) => [
       group.host || '—',
       group.categoryLabel || 'Other third-party',
       group.classificationConfidence === 'known-domain' ? 'known domain' : group.classificationConfidence === 'hostname-heuristic' ? 'heuristic' : 'unclassified',
@@ -85,7 +123,7 @@ function renderThirdPartyAudit() {
       thirdPartyTypeMix(group.typeCounts),
     ]);
     appendThirdPartyTable(domainCard, ['Host', 'Category', 'Match', 'Requests', 'Sized', 'Known bytes', 'Time', 'Types'], rows, [0]);
-    if (groups.length > 200) domainCard.appendChild(el('div', 'muted', `Showing first 200 of ${groups.length} third-party hosts.`));
+    appendThirdPartyPager(domainCard, groups.length);
   }
   domainCard.appendChild(el('div', 'muted', 'Hosts are grouped from already-observed Resource Timing entries. Unknown cross-origin/cache sizes remain unknown; resources are not fetched again.'));
   panel.appendChild(domainCard);
