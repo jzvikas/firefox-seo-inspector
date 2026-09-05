@@ -84,15 +84,20 @@
 
   function redirectDiagnostics(chain) {
     const redirects = Array.isArray(chain) ? chain : [];
-    const visited = new Set();
-    let loop = false;
+    const path = [];
     for (const hop of redirects) {
       const from = normalizeUrl(hop.from || hop.url || '');
       const to = normalizeUrl(hop.to || hop.redirectUrl || '');
-      if (from && visited.has(from)) loop = true;
-      if (from) visited.add(from);
-      if (to && visited.has(to)) loop = true;
-      if (to) visited.add(to);
+      if (!path.length && from) path.push(from);
+      else if (from && path[path.length - 1] !== from) path.push(from);
+      if (to) path.push(to);
+    }
+
+    const visited = new Set();
+    let loop = false;
+    for (const url of path) {
+      if (visited.has(url)) loop = true;
+      visited.add(url);
     }
     return {
       hopCount: redirects.length,
