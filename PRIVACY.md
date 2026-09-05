@@ -10,6 +10,8 @@ The extension has no telemetry, analytics, advertising, account system, remote l
 
 A page snapshot is stored only when the user clicks **Save snapshot**. Snapshots are stored with Firefox extension local storage and contain SEO-oriented page facts used for later comparison. They can be removed by clearing the extension's storage or uninstalling the extension.
 
+Custom audit rules are stored only in Firefox `browser.storage.local` on the current browser. They contain thresholds, required-signal toggles, disabled check IDs, and severity overrides. They are not uploaded, do not contain page content, and do not modify the inspected website. Resetting Rules removes the saved custom-rule record and restores built-in defaults.
+
 HTTP response metadata for the current browser session is held in Firefox `storage.session`, which is memory-backed and cleared when the browser session ends.
 
 ## External SEO checks
