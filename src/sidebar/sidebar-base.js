@@ -7,6 +7,8 @@ const state = {
   rawReport: null,
   snapshotDiff: null,
   rawDiff: null,
+  indexabilityRawDiff: undefined,
+  canonicalChecks: new Map(),
   issueFilter: 'all',
 };
 
@@ -67,6 +69,7 @@ async function refresh() {
   state.tabId = tab && typeof tab.id === 'number' ? tab.id : null;
   state.rawReport = null;
   state.rawDiff = null;
+  state.indexabilityRawDiff = undefined;
   state.linkResults = new Map();
   pageUrl.textContent = tab && tab.url ? tab.url : '';
   pageUrl.title = tab && tab.url ? tab.url : '';
@@ -114,6 +117,8 @@ function renderOverview() {
   const h1 = f.headings.filter((item) => item.level === 1);
   const types = SeoCore.schemaTypes(f.schemas);
   const robots = f.robots.map((item) => `${item.name}: ${item.content}`).join(' · ');
+  const indexability = state.report.evaluation.indexability
+    || Indexability.analyze(f, r);
   panel.appendChild(card('Metadata', [
     ['Title', `${f.title || '—'}${f.title ? ` (${f.title.length})` : ''}`],
     ['Description', `${f.description || '—'}${f.description ? ` (${f.description.length})` : ''}`],
@@ -124,7 +129,9 @@ function renderOverview() {
     ['Viewport', f.viewport || '—'],
   ]));
   panel.appendChild(card('Page', [
+    ['Indexability', indexability.verdict],
     ['HTTP', r.statusCode ? `${r.statusCode} ${r.statusLine || ''}`.trim() : 'Not captured'],
+    ['Redirect hops', (r.redirectChain || []).length],
     ['H1', h1.length ? `${h1.length}: ${h1.map((item) => item.text).join(' | ')}` : '0'],
     ['Headings', f.headings.length],
     ['Words', f.textWordCount],
