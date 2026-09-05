@@ -70,8 +70,9 @@
     for (const [name, raw] of url.searchParams.entries()) {
       if (classifyParam(name) !== 'pagination') continue;
       const number = Number.parseInt(String(raw || ''), 10);
+      const key = name.toLowerCase();
+      if ((key === 'offset' || key === 'start') && Number.isInteger(number) && number > 0) return { name, number: null };
       if (Number.isInteger(number) && number >= 1) return { name, number };
-      if ((name.toLowerCase() === 'offset' || name.toLowerCase() === 'start') && Number.isInteger(number) && number > 0) return { name, number: null };
     }
     const pathMatch = url.pathname.match(/(?:^|\/)(?:page|p)\/(\d+)(?:\/|$)/i);
     if (pathMatch) return { name: 'path', number: Number.parseInt(pathMatch[1], 10) || null };
@@ -222,7 +223,7 @@
     const wordCount = Number(source.textWordCount) || 0;
     const itemCount = Math.max(listing.urls.length, listing.productMicrodataCount);
     const faceted = Boolean(pageType && pageType.traits && pageType.traits.faceted) || filterParams.length > 0 || sortParams.length > 0;
-    const pagination = Boolean(pageType && pageType.traits && pageType.traits.pagination) || pageNumber > 1 || relNext || relPrev || pagerLinks.length > 0;
+    const pagination = Boolean(Boolean(pageType && pageType.traits && pageType.traits.pagination) || pageNumber > 1 || relNext || relPrev || pagerLinks.length > 0);
     const noindex = hasNoindex(source);
 
     if (!canonical) {
