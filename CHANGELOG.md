@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Dedicated **Tabs** panel for on-demand audits of already-open HTTP/HTTPS tabs without crawling or refetching those pages.
+- Bounded multi-tab scanning for up to 100 tabs with six concurrent content-script audits, live progress, cancellation, a 15-second per-tab safety timeout, and explicit unavailable-tab reporting instead of network fallback.
+- Cross-tab collection of URL, HTTP status, title, description, H1, canonical, robots, indexability, SEO score, and issue counts, plus normalized duplicate title/description/H1 detection.
+- Multi-tab search, indexability/issue/duplicate/availability filters, sorting, and local CSV/JSON export.
+- Automated multi-tab model tests, sidebar dependency checks, renderer boot smoke coverage, and a VM runtime scan test that exercises tab querying, content-script reports, progress completion, and duplicate annotation.
 - Dedicated local-only Profiles panel with exact-hostname matching, optional labels, enable/disable state, create/save/delete actions, and a bounded saved-profile inventory.
 - Domain profiles inherit global Rules by default and can override title/description thresholds, oversized-image ratio, known image byte-size limit, and required title/description/canonical/H1/schema/hreflang/HTTPS signals.
 - Per-host expected JSON-LD schema types and hreflang values with `profile.schema.expected` and `profile.hreflang.expected` findings when expectations are missing.
@@ -115,7 +120,7 @@ All notable changes to this project are documented here.
 - Heading tree and in-page element highlighting.
 - Link inventory with internal/external classification, rel flags, missing-label detection, and on-demand credential-free `HEAD` status checks.
 - Image inspection for alt attributes, explicit dimensions, intrinsic/rendered dimensions, loading mode, and image source.
-- JSON-LD parsing, schema type discovery, invalid structured-data detection, and basic Product schema checks.
+- JSON-LD parsing, schema type discovery, invalid structured-data detection, and basic Product checks.
 - Hreflang, Open Graph, and Twitter/X card inspection.
 - Rendered DOM versus raw HTML comparison.
 - Per-URL local snapshots and regression diffs.
