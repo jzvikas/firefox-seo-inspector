@@ -1,5 +1,17 @@
 'use strict';
 
+// Compatibility view over the sidebar's canonical active-tab state. The page
+// comparison code reads this object lazily, so keeping it backed by state.tabId
+// avoids a stale duplicate tab object and prevents startup ReferenceError.
+const currentActiveTab = {};
+Object.defineProperty(currentActiveTab, 'id', {
+  configurable: false,
+  enumerable: true,
+  get() {
+    return state && typeof state.tabId === 'number' ? state.tabId : null;
+  },
+});
+
 reportFromFetchedCompare = function reportFromFetchedCompareWithDocumentBase(resource) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(String(resource.text || ''), 'text/html');
