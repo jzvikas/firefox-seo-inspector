@@ -43,7 +43,7 @@ Goal: answer “can this URL be indexed, and if not, why?” in one place.
 ### robots.txt
 
 - [x] Discover `/robots.txt` automatically.
- [x] Show robots.txt HTTP status.
+- [x] Show robots.txt HTTP status.
 - [x] Determine whether the current URL is allowed or blocked.
 - [x] Show matching user-agent and rule.
 - [x] Discover sitemap declarations.
