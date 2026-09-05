@@ -17,6 +17,10 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - JSON report export and copyable issue list.
 - No telemetry, analytics, remote scripts, accounts, or backend.
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the planned path from the current release through v1.0. The roadmap prioritizes indexability diagnostics, performance/security inspection, regression workflows, multi-page auditing, crawler-lite functionality, and platform-neutral e-commerce SEO checks.
+
 ## Install for development
 
 Requires Firefox 142 or newer.
