@@ -12,7 +12,18 @@ Object.defineProperty(currentActiveTab, 'id', {
   },
 });
 
-reportFromFetchedCompare = function reportFromFetchedCompareWithDocumentBase(resource) {
+async function loadCompareAuditPolicy(url) {
+  try {
+    const stored = await browser.storage.local.get([CustomRules.STORAGE_KEY, DomainProfiles.STORAGE_KEY]);
+    const baseRules = CustomRules.normalize(stored && stored[CustomRules.STORAGE_KEY]);
+    const profiles = DomainProfiles.normalizeStore(stored && stored[DomainProfiles.STORAGE_KEY]);
+    return DomainProfiles.resolve(profiles, url, baseRules);
+  } catch (_error) {
+    return DomainProfiles.resolve(null, url, CustomRules.normalize(null));
+  }
+}
+
+reportFromFetchedCompare = async function reportFromFetchedCompareWithDocumentBase(resource) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(String(resource.text || ''), 'text/html');
   const url = new URL(resource.url || resource.requestedUrl);
@@ -33,11 +44,11 @@ reportFromFetchedCompare = function reportFromFetchedCompareWithDocumentBase(res
   };
   const securityResponseMeta = resource.securityResponseMeta || null;
   const facts = PageExtractor.extract(doc, url, { performance: null });
-  const rulesConfig = state.report && state.report.customRules
-    ? CustomRules.normalize(state.report.customRules)
-    : CustomRules.normalize(null);
+  const policy = await loadCompareAuditPolicy(url.href);
+  const rulesConfig = CustomRules.normalize(policy.rules);
   const baseEvaluation = SeoCore.evaluateFacts(facts, responseMeta, CustomRules.toSeoCoreOptions(rulesConfig));
-  const evaluation = CustomRules.applyEvaluation(baseEvaluation, facts, rulesConfig);
+  let evaluation = CustomRules.applyEvaluation(baseEvaluation, facts, rulesConfig);
+  if (policy.profile) evaluation = DomainProfiles.applyEvaluation(evaluation, facts, policy.profile, rulesConfig);
   evaluation.indexability = Indexability.analyze(facts, responseMeta);
   const securityAudit = SecurityAudit.collect(doc, {
     pageUrl: facts.url,
@@ -45,7 +56,15 @@ reportFromFetchedCompare = function reportFromFetchedCompareWithDocumentBase(res
     performance: null,
     assetAudit: null,
   });
-  return { facts, evaluation, responseMeta, securityResponseMeta, customRules: rulesConfig, securityAudit };
+  return {
+    facts,
+    evaluation,
+    responseMeta,
+    securityResponseMeta,
+    customRules: rulesConfig,
+    domainProfile: policy.profile ? DomainProfiles.profileSummary(policy.profile) : null,
+    securityAudit,
+  };
 };
 
 const renderCompareWithoutPageComparison = renderCompare;
