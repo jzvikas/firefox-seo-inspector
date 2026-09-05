@@ -62,6 +62,7 @@ test('inactive Inspector panels render lazily and only rerender when dirty', asy
       tabs: {
         onActivated: { addListener() {} },
         onUpdated: { addListener() {} },
+        onRemoved: { addListener() {} },
         async sendMessage() { return { ok: true }; },
       },
       runtime: {
