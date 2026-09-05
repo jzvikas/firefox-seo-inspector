@@ -43,7 +43,7 @@ Goal: answer “can this URL be indexed, and if not, why?” in one place.
 ### robots.txt
 
 - [x] Discover `/robots.txt` automatically.
-- [x] Show robots.txt HTTP status.
+ [x] Show robots.txt HTTP status.
 - [x] Determine whether the current URL is allowed or blocked.
 - [x] Show matching user-agent and rule.
 - [x] Discover sitemap declarations.
@@ -328,7 +328,7 @@ Goal: make the extension dependable enough for continuous personal use.
 
 - [ ] Resolve all known critical and high-priority bugs.
 - [ ] No unhandled promise rejections or uncaught extension errors in normal workflows.
-- [ ] Graceful behavior on restricted Firefox pages and unsupported URL schemes.
+- [x] Graceful behavior on restricted Firefox pages and unsupported URL schemes.
 - [ ] Cancellation and timeout handling for all network-heavy operations.
 - [ ] Local-storage schema/version migration strategy.
 
@@ -372,7 +372,7 @@ Goal: make the extension dependable enough for continuous personal use.
 - [ ] Complete feature documentation.
 - [ ] Keyboard-shortcut documentation.
 - [x] Custom-rule/profile documentation.
-- [ ] Troubleshooting section.
+- [x] Troubleshooting section.
 - [ ] Development and release instructions.
 
 ### v1.0.0 done when
