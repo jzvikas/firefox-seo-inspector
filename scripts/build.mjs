@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 const srcRoot = path.resolve('src');
 const distRoot = path.resolve('dist');
 const manifest = JSON.parse(fs.readFileSync(path.join(srcRoot, 'manifest.json'), 'utf8'));
-const outputName = `firefox-seo-inspector-${manifest.version}.xpi`;
+const outputName = `seo-inspector-${manifest.version}.xpi`;
 
 function filesUnder(dir, prefix = '') {
   const output = [];
@@ -75,7 +75,7 @@ function buildZip(files) {
 
 fs.mkdirSync(distRoot, { recursive: true });
 for (const name of fs.readdirSync(distRoot)) {
-  if (/^firefox-seo-inspector-.*\.(?:xpi|sha256)$/.test(name)) fs.rmSync(path.join(distRoot, name));
+  if (/^(?:firefox-)?seo-inspector-.*\.(?:xpi|sha256)$/.test(name)) fs.rmSync(path.join(distRoot, name));
 }
 const archive = buildZip(filesUnder(srcRoot));
 const outputPath = path.join(distRoot, outputName);
