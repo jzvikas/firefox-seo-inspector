@@ -102,12 +102,12 @@ function renderHreflang() {
   const checkButton = el('button', '', hreflangState.checking ? 'Checking…' : 'Validate targets');
   checkButton.type = 'button';
   checkButton.disabled = hreflangState.checking || !local.items.length;
-  checkButton.addEventListener('click', () => startHreflangValidation(local.items, facts.url));
+  checkButton.addEventListener('click', () => startHreflangValidation(local.items, facts.url).catch((error) => handleAsyncUiFailure('hreflang-check', error)));
   toolbar.appendChild(checkButton);
   if (hreflangState.checking) {
     const cancelButton = el('button', '', 'Cancel');
     cancelButton.type = 'button';
-    cancelButton.addEventListener('click', () => cancelHreflangValidation());
+    cancelButton.addEventListener('click', () => cancelHreflangValidation().catch((error) => handleAsyncUiFailure('hreflang-cancel', error)));
     toolbar.appendChild(cancelButton);
   }
   if (hreflangState.response) {
