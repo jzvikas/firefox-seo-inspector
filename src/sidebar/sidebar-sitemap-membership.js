@@ -130,13 +130,13 @@ function appendSitemapMembershipCard(panel) {
   const checkButton = el('button', '', sitemapMembershipState.checking ? 'Scanning…' : sitemapMembershipState.report ? 'Check again' : 'Check sitemap membership');
   checkButton.type = 'button';
   checkButton.disabled = sitemapMembershipState.checking;
-  checkButton.addEventListener('click', () => runSitemapMembership(pageUrlValue, canonicalUrlValue));
+  checkButton.addEventListener('click', () => runSitemapMembership(pageUrlValue, canonicalUrlValue).catch((error) => handleAsyncUiFailure('sitemap-membership-check', error)));
   toolbar.appendChild(checkButton);
 
   if (sitemapMembershipState.checking) {
     const cancelButton = el('button', '', 'Cancel');
     cancelButton.type = 'button';
-    cancelButton.addEventListener('click', () => cancelSitemapMembership());
+    cancelButton.addEventListener('click', () => cancelSitemapMembership().catch((error) => handleAsyncUiFailure('sitemap-membership-cancel', error)));
     toolbar.appendChild(cancelButton);
   }
   node.appendChild(toolbar);
