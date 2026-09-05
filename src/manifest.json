@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Firefox SEO Inspector",
+  "name": "SEO Inspector",
   "version": "0.2.0",
-  "description": "A local-first technical SEO inspector for Firefox with page audits, highlighting, link checks, structured data inspection, and snapshot comparison.",
+  "description": "A local-first technical SEO inspector with page audits, highlighting, link checks, structured data inspection, and snapshot comparison.",
   "icons": {
     "48": "icons/icon.svg",
     "96": "icons/icon.svg"
@@ -38,7 +38,7 @@
     ]
   },
   "action": {
-    "default_title": "Open Firefox SEO Inspector window",
+    "default_title": "Open SEO Inspector window",
     "default_icon": "icons/icon.svg",
     "default_popup": "launcher/launcher.html"
   },
