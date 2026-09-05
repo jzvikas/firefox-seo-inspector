@@ -152,7 +152,7 @@ function renderHreflang() {
     row.appendChild(el('td', '', target ? (target.canonicalMismatch ? 'Mismatch' : (target.canonical ? 'OK' : 'None')) : '—'));
     row.appendChild(el('td', '', target ? (target.noindex ? 'NOINDEX' : 'Indexable') : '—'));
     const urlCell = el('td', 'cell-url code', item.href || '—');
-    if (target && target.level !== 'ok') urlCell.classList.add(target.level === 'critical' ? 'serp-metric-bad' : 'serp-metric-bad');
+    if (target && target.level !== 'ok') urlCell.classList.add('serp-metric-bad');
     row.appendChild(urlCell);
     body.appendChild(row);
   });
