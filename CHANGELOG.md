@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Dedicated **Category** panel with platform-neutral category/listing canonical diagnostics, bounded strong listing-item counts, empty/thin listing warnings, faceted-navigation inspection, and pagination diagnostics.
+- Local query-parameter classification for filter/facet, sort/order, pagination, tracking, session-like, and other parameters, plus index-bloat warnings for indexable self-canonical faceted URLs and duplicate-crawl-path warnings for tracking/session-like self-canonical URLs.
+- Bounded parameterized internal-link inventory with in-page highlighting for filter/sort/tracking/session-like links; listing-link evidence intentionally uses schema.org ItemList/Product signals instead of vendor-specific storefront selectors.
+- Category/listing audits are attached to rendered, authenticated raw-source, explicit URL comparison, and Crawler fetched-page reports without additional network requests or browser permissions.
+- Automated category audit model tests, Category sidebar runtime coverage, DOM listing-signal tests, comparison/runtime dependency checks, and public documentation for current limits and platform-neutral behavior.
 - Dedicated **Product** panel with platform-neutral Product/ProductGroup structured-data quality, commerce-field completeness, canonical/variant diagnostics, BreadcrumbList checks, and availability handling hints.
 - Product field inspection for name, image, SKU, GTIN, brand, Offer/AggregateOffer price and currency, availability, aggregate rating, and review signals, while keeping optional identifiers/reviews informational when absence alone is not an error.
 - Product canonical diagnostics for missing/multiple/cross-origin/unexpected canonicals, generic variant-like URL parameters, base-product canonical strategies, and ProductGroup pages canonicalizing to one nested Product variant.
@@ -77,7 +82,6 @@ All notable changes to this project are documented here.
 - Snapshot imports use a 5 MiB file-size limit, validate the import envelope, merge by snapshot ID, and keep all data in Firefox local extension storage.
 - Automated tests for snapshot history ordering/caps, baseline behavior, import/export merging, malformed import rejection, and legacy migration.
 - Version-2 regression snapshots with bounded summaries for metadata, indexability, heading structure, links, images, schema, hreflang, HTTP metadata, performance, and security while keeping version-1 snapshot comparisons compatible.
-- Regression classification in the Compare panel with separate regression, improvement, and neutral-change counts plus before/after values and audit categories.
 - Regression rules for newly blocked/noindex pages, HTTP errors, broken checked links/images, invalid JSON-LD, image SEO issues, security-header weakening, mixed content, schema/hreflang/heading changes, and SEO score movement.
 - Performance regression detection for request count, known bytes, third-party load, DOM size/depth, TTFB, and navigation duration using both absolute and relative thresholds to suppress normal measurement noise.
 - On-demand link/image failure counts are compared only when both snapshots contain results from the corresponding network check, preventing missing checks from becoming false zero-error baselines.
@@ -92,6 +96,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Detached Inspector recovery now validates that a persisted popup still contains the live extension page after an add-on reload/update; stale blank popups are removed and recreated instead of being focused forever. Regression coverage reproduces the blank-window state explicitly.
 - Restored sidebar startup after the page-comparison update by backing the compare UI's active-tab context with the canonical sidebar `state.tabId` instead of an undefined global.
 - Added an automated Node `vm` sidebar startup smoke test so the page-comparison script chain is executed together and this class of runtime `ReferenceError` is caught by CI.
 
