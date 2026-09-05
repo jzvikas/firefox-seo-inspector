@@ -32,6 +32,10 @@ All notable changes to this project are documented here.
 - Security heuristics for CSP framing/script policy, HSTS max-age, modern `frame-ancestors` fallback, `unsafe-url` referrer policy, and `nosniff` validation.
 - Third-party script inventory reused from the existing local asset audit, without refetching scripts or executing page code.
 - Automated tests for HSTS/CSP parsing, report-only CSP, framing protection, referrer/nosniff diagnostics, mixed-content classification/deduplication, and third-party script inventory.
+- Link audit intelligence for generic anchor text, identical anchor text pointing to different URLs, and different anchor texts pointing to the same URL.
+- Live bounded link-check progress with cancellation plus a 1,000-entry in-memory session cache; explicit re-checks bypass the cache.
+- Dedicated Links filters for broken, redirecting, external, nofollow, sponsored, UGC, and generic-anchor links while retaining the existing 250-URL / six-concurrent-request safety limits.
+- Automated tests for anchor normalization, generic-anchor matching, anchor/URL consistency grouping, and network/rel-based link filtering.
 
 ## [0.2.0] - 2026-09-05
 

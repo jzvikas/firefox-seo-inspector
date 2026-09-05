@@ -136,12 +136,12 @@ Goal: explain what makes a page heavy, fragile, or technically weak.
 
 ### Link audit improvements
 
-- [ ] Batch link checker with progress and cancellation.
-- [ ] Cache link results locally for the current session.
-- [ ] Detect generic anchor text.
-- [ ] Detect same anchor text pointing to different URLs.
-- [ ] Detect different anchors pointing to the same URL.
-- [ ] Dedicated filters for broken, redirecting, external, nofollow, sponsored, and UGC links.
+- [x] Batch link checker with progress and cancellation.
+- [x] Cache link results locally for the current session.
+- [x] Detect generic anchor text.
+- [x] Detect same anchor text pointing to different URLs.
+- [x] Detect different anchors pointing to the same URL.
+- [x] Dedicated filters for broken, redirecting, external, nofollow, sponsored, and UGC links.
 
 ### Security inspection
 

@@ -4,7 +4,9 @@ const LINK_NETWORK_MAX_TARGETS = 250;
 const LINK_NETWORK_CONCURRENCY = 6;
 const LINK_NETWORK_REQUEST_TIMEOUT_MS = 10000;
 const LINK_NETWORK_SCAN_TIMEOUT_MS = 30000;
+const LINK_NETWORK_CACHE_MAX = 1000;
 const linkNetworkOperations = new Map();
+const linkNetworkCache = new Map();
 
 function linkRequestController(timeoutMs, externalSignal) {
   const controller = new AbortController();
@@ -28,7 +30,29 @@ function linkRequestController(timeoutMs, externalSignal) {
   };
 }
 
-async function checkLinkTarget(url, externalSignal) {
+function cacheLinkResult(url, result) {
+  if (!url || !result || result.error) return;
+  if (linkNetworkCache.has(url)) linkNetworkCache.delete(url);
+  linkNetworkCache.set(url, { ...result, cached: false, cachedAt: Date.now() });
+  while (linkNetworkCache.size > LINK_NETWORK_CACHE_MAX) {
+    linkNetworkCache.delete(linkNetworkCache.keys().next().value);
+  }
+}
+
+function cachedLinkResult(url) {
+  const result = linkNetworkCache.get(url);
+  if (!result) return null;
+  linkNetworkCache.delete(url);
+  linkNetworkCache.set(url, result);
+  return { ...result, cached: true };
+}
+
+async function checkLinkTarget(url, externalSignal, force) {
+  if (!force) {
+    const cached = cachedLinkResult(url);
+    if (cached) return cached;
+  }
+
   const linked = linkRequestController(LINK_NETWORK_REQUEST_TIMEOUT_MS, externalSignal);
   try {
     const response = await fetch(url, {
@@ -39,14 +63,17 @@ async function checkLinkTarget(url, externalSignal) {
       cache: 'no-store',
       signal: linked.controller.signal,
     });
-    return {
+    const result = {
       url,
       status: response.status,
       statusText: response.statusText || '',
       redirected: response.redirected || response.url !== url,
       finalUrl: response.url || url,
       error: null,
+      cached: false,
     };
+    cacheLinkResult(url, result);
+    return result;
   } catch (error) {
     const reason = error && error.name === 'AbortError'
       ? (externalSignal && externalSignal.aborted ? 'cancelled' : linked.timedOut() ? 'timeout' : 'cancelled')
@@ -58,10 +85,21 @@ async function checkLinkTarget(url, externalSignal) {
       redirected: false,
       finalUrl: url,
       error: reason,
+      cached: false,
     };
   } finally {
     linked.cleanup();
   }
+}
+
+function notifyLinkProgress(operationId, checked, requested, result) {
+  browser.runtime.sendMessage({
+    type: 'seoInspector.linkCheckProgress',
+    operationId,
+    checked,
+    requested,
+    result,
+  }).catch(() => {});
 }
 
 async function checkLinksBounded(message) {
@@ -77,12 +115,17 @@ async function checkLinksBounded(message) {
 
   const results = new Array(selection.urls.length);
   let cursor = 0;
+  let completed = 0;
+  const force = Boolean(message.force);
 
   async function worker() {
     while (cursor < selection.urls.length && !controller.signal.aborted) {
       const index = cursor;
       cursor += 1;
-      results[index] = await checkLinkTarget(selection.urls[index], controller.signal);
+      const result = await checkLinkTarget(selection.urls[index], controller.signal, force);
+      results[index] = result;
+      completed += 1;
+      notifyLinkProgress(operationId, completed, selection.urls.length, result);
     }
   }
 
@@ -95,6 +138,7 @@ async function checkLinksBounded(message) {
       results: finalResults,
       checked: finalResults.length,
       requested: selection.urls.length,
+      cached: finalResults.filter((item) => item.cached).length,
       capped: selection.capped,
       cancelled: controller.signal.aborted && !timedOut,
       timedOut,
@@ -103,6 +147,7 @@ async function checkLinksBounded(message) {
         concurrency: LINK_NETWORK_CONCURRENCY,
         requestTimeoutMs: LINK_NETWORK_REQUEST_TIMEOUT_MS,
         scanTimeoutMs: LINK_NETWORK_SCAN_TIMEOUT_MS,
+        cacheEntries: LINK_NETWORK_CACHE_MAX,
       },
     };
   } finally {

@@ -115,9 +115,18 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Third-party script inventory reuses the already-collected asset audit and performs no additional requests or page-code execution.
 - Cookie inspection is intentionally not enabled yet because it would require expanding permissions; the current Security feature adds no new permission.
 
+### Link audit intelligence
+
+- Live progress and cancellation for the existing bounded 250-URL link-status scan, with six concurrent credential-free requests, 10-second per-request timeout, and a 30-second total scan limit.
+- Successful link results are reused from an in-memory session cache capped at 1,000 URLs; **Check again** explicitly bypasses that cache and performs a fresh network check.
+- Generic-anchor detection for deliberately small, local heuristics such as “click here”, “read more”, and “learn more”.
+- Detection of identical normalized anchor text pointing to multiple URLs and multiple normalized anchor texts pointing to the same URL.
+- Dedicated filters for broken, redirecting, external, nofollow, sponsored, UGC, and generic-anchor links.
+- Anchor analysis works from already-extracted page link facts and does not send anchor text or page content to an external service.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestone focuses on link-audit intelligence before moving into regression and multi-page workflows.
+See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is multi-snapshot history, followed by richer regression detection and page comparison workflows.
 
 ## Install for development
 
@@ -135,7 +144,7 @@ A prebuilt unsigned package is also kept in `dist/`. Stable Firefox generally re
 
 The extension requests access to HTTP and HTTPS pages because its job is to inspect the active page and, only when required by a feature, check related URLs. The `webRequest` permission is used read-only to capture SEO-relevant response metadata, redirect hops, and selected main-document security response headers.
 
-External link, image, canonical, hreflang, and sitemap checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. `robots.txt` discovery is a single size/time-bounded request and is cached briefly.
+External link, image, canonical, hreflang, and sitemap checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. The link checker also maintains a bounded in-memory session cache for successful results; explicit re-checks bypass it. `robots.txt` discovery is a single size/time-bounded request and is cached briefly.
 
 The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints, asset inspection, and third-party grouping. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. Third-party service categories are local heuristics rather than network lookups. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
 
