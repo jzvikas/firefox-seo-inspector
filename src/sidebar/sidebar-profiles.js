@@ -7,6 +7,7 @@ const profilesUiState = {
   hostname: '',
   message: '',
   error: '',
+  schemaStatus: null,
 };
 
 let profileEditorRefs = null;
@@ -23,6 +24,7 @@ async function loadProfilesStore() {
   if (profilesUiState.loading) return;
   profilesUiState.loading = true;
   try {
+    profilesUiState.schemaStatus = await ensureStorageSchemaReady(false);
     const stored = await browser.storage.local.get(DomainProfiles.STORAGE_KEY);
     profilesUiState.store = DomainProfiles.normalizeStore(stored && stored[DomainProfiles.STORAGE_KEY]);
     profilesUiState.error = '';
@@ -218,6 +220,7 @@ async function saveCurrentProfile(hostname) {
     return;
   }
   try {
+    profilesUiState.schemaStatus = await requireWritableStorageSchema();
     const next = DomainProfiles.upsert(profilesUiState.store, raw);
     await browser.storage.local.set({ [DomainProfiles.STORAGE_KEY]: next });
     profilesUiState.store = next;
@@ -225,8 +228,8 @@ async function saveCurrentProfile(hostname) {
     profilesUiState.message = `Profile saved locally for ${hostname}. Re-running the audit…`;
     renderProfiles();
     await refresh();
-  } catch (_error) {
-    profilesUiState.error = 'Could not save the domain profile.';
+  } catch (error) {
+    profilesUiState.error = storageSchemaReadOnlyMessage(profilesUiState.schemaStatus) || (error && error.message) || 'Could not save the domain profile.';
     profilesUiState.message = '';
     renderProfiles();
   }
@@ -234,6 +237,7 @@ async function saveCurrentProfile(hostname) {
 
 async function deleteCurrentProfile(hostname) {
   try {
+    profilesUiState.schemaStatus = await requireWritableStorageSchema();
     const next = DomainProfiles.remove(profilesUiState.store, hostname);
     await browser.storage.local.set({ [DomainProfiles.STORAGE_KEY]: next });
     profilesUiState.store = next;
@@ -241,8 +245,8 @@ async function deleteCurrentProfile(hostname) {
     profilesUiState.message = `Profile removed for ${hostname}. Global Rules are active again.`;
     renderProfiles();
     await refresh();
-  } catch (_error) {
-    profilesUiState.error = 'Could not remove the domain profile.';
+  } catch (error) {
+    profilesUiState.error = storageSchemaReadOnlyMessage(profilesUiState.schemaStatus) || (error && error.message) || 'Could not remove the domain profile.';
     renderProfiles();
   }
 }
@@ -282,7 +286,9 @@ function renderProfiles() {
   }
   if (!profilesUiState.loaded && !profilesUiState.loading) loadProfilesStore().catch(() => {});
 
-  if (profilesUiState.error) panel.appendChild(el('div', 'issue critical', profilesUiState.error));
+  const readOnly = storageSchemaReadOnlyMessage(profilesUiState.schemaStatus);
+  if (readOnly) panel.appendChild(el('div', 'issue warning', readOnly));
+  if (profilesUiState.error && profilesUiState.error !== readOnly) panel.appendChild(el('div', 'issue critical', profilesUiState.error));
   if (profilesUiState.message) panel.appendChild(el('div', 'issue info', profilesUiState.message));
 
   const intro = el('div', 'card');
@@ -302,15 +308,18 @@ function renderProfiles() {
   const globalRules = rulesUiState && rulesUiState.config
     ? CustomRules.normalize(rulesUiState.config)
     : CustomRules.normalize(null);
+  const writable = storageSchemaIsWritable();
 
   const toolbar = el('div', 'toolbar');
   const save = el('button', '', existing ? 'Save profile' : 'Create profile');
   save.type = 'button';
+  save.disabled = !writable;
   save.addEventListener('click', () => saveCurrentProfile(hostname).catch(() => {}));
   toolbar.appendChild(save);
   if (existing) {
     const remove = el('button', '', 'Delete profile');
     remove.type = 'button';
+    remove.disabled = !writable;
     remove.addEventListener('click', () => deleteCurrentProfile(hostname).catch(() => {}));
     toolbar.appendChild(remove);
   }

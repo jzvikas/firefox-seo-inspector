@@ -20,6 +20,11 @@
   "background": {
     "scripts": [
       "background/window-background.js",
+      "lib/custom-rules.js",
+      "lib/domain-profiles.js",
+      "lib/snapshot-history.js",
+      "lib/storage-schema.js",
+      "background/storage-background.js",
       "lib/robots.js",
       "lib/sitemap.js",
       "lib/head-signals.js",
