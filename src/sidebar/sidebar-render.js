@@ -8,18 +8,20 @@ function renderLinks() {
   const toolbar = el('div', 'toolbar');
   const checkButton = el('button', '', 'Check HTTP status');
   checkButton.type = 'button';
-  checkButton.addEventListener('click', async () => {
-    checkButton.disabled = true;
-    checkButton.textContent = 'Checking…';
-    try {
-      const urls = links.filter((item) => item.kind === 'http').map((item) => item.href);
-      const response = await browser.runtime.sendMessage({ type: 'seoInspector.checkLinks', urls });
-      state.linkResults = new Map((response.results || []).map((item) => [SeoCore.normalizedUrl(item.url), item]));
-      renderLinks();
-    } finally {
-      checkButton.disabled = false;
-      checkButton.textContent = 'Check HTTP status';
-    }
+  checkButton.addEventListener('click', () => {
+    (async () => {
+      checkButton.disabled = true;
+      checkButton.textContent = 'Checking…';
+      try {
+        const urls = links.filter((item) => item.kind === 'http').map((item) => item.href);
+        const response = await browser.runtime.sendMessage({ type: 'seoInspector.checkLinks', urls });
+        state.linkResults = new Map((response.results || []).map((item) => [SeoCore.normalizedUrl(item.url), item]));
+        renderLinks();
+      } finally {
+        checkButton.disabled = false;
+        checkButton.textContent = 'Check HTTP status';
+      }
+    })().catch((error) => handleAsyncUiFailure('legacy-link-check', error));
   });
   toolbar.appendChild(checkButton);
   if (state.linkResults.size) {
@@ -138,38 +140,44 @@ function renderCompare() {
   const toolbar = el('div', 'toolbar');
   const saveButton = el('button', '', 'Save snapshot');
   saveButton.type = 'button';
-  saveButton.addEventListener('click', async () => {
-    const key = snapshotKey();
-    if (!key) return;
-    await browser.storage.local.set({ [key]: SeoCore.makeSnapshot(state.report) });
-    state.snapshotDiff = [];
-    renderCompare();
+  saveButton.addEventListener('click', () => {
+    (async () => {
+      const key = snapshotKey();
+      if (!key) return;
+      await browser.storage.local.set({ [key]: SeoCore.makeSnapshot(state.report) });
+      state.snapshotDiff = [];
+      renderCompare();
+    })().catch((error) => handleAsyncUiFailure('legacy-snapshot-save', error));
   });
   toolbar.appendChild(saveButton);
 
   const compareButton = el('button', '', 'Compare saved snapshot');
   compareButton.type = 'button';
-  compareButton.addEventListener('click', async () => {
-    const key = snapshotKey();
-    const stored = key ? await browser.storage.local.get(key) : {};
-    state.snapshotDiff = stored[key] ? SeoCore.diffSnapshots(stored[key], SeoCore.makeSnapshot(state.report)) : null;
-    renderCompare();
+  compareButton.addEventListener('click', () => {
+    (async () => {
+      const key = snapshotKey();
+      const stored = key ? await browser.storage.local.get(key) : {};
+      state.snapshotDiff = stored[key] ? SeoCore.diffSnapshots(stored[key], SeoCore.makeSnapshot(state.report)) : null;
+      renderCompare();
+    })().catch((error) => handleAsyncUiFailure('legacy-snapshot-compare', error));
   });
   toolbar.appendChild(compareButton);
 
   const rawButton = el('button', '', 'Compare raw HTML');
   rawButton.type = 'button';
-  rawButton.addEventListener('click', async () => {
-    rawButton.disabled = true;
-    rawButton.textContent = 'Fetching…';
-    try {
-      state.rawReport = await sendToTab({ type: 'seoInspector.fetchRaw' });
-      state.rawDiff = SeoCore.diffPageFacts(state.report.facts, state.rawReport.facts);
-      renderCompare();
-    } catch (_error) {
-      state.rawDiff = null;
-      renderCompare();
-    }
+  rawButton.addEventListener('click', () => {
+    (async () => {
+      rawButton.disabled = true;
+      rawButton.textContent = 'Fetching…';
+      try {
+        state.rawReport = await sendToTab({ type: 'seoInspector.fetchRaw' });
+        state.rawDiff = SeoCore.diffPageFacts(state.report.facts, state.rawReport.facts);
+        renderCompare();
+      } catch (_error) {
+        state.rawDiff = null;
+        renderCompare();
+      }
+    })().catch((error) => handleAsyncUiFailure('legacy-raw-compare', error));
   });
   toolbar.appendChild(rawButton);
   panel.appendChild(toolbar);
