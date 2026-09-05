@@ -1,5 +1,31 @@
 'use strict';
 
+const PANEL_RENDERERS = Object.freeze({
+  overview: [renderOverview],
+  indexability: [renderIndexability],
+  performance: [renderPerformance, renderPerformanceHints, renderAssetAudit, renderThirdPartyAudit],
+  content: [renderContent],
+  security: [renderSecurity],
+  serp: [renderSerp],
+  hreflang: [renderHreflang],
+  issues: [renderIssues],
+  headings: [renderHeadings],
+  links: [renderLinks],
+  images: [renderImagesNetwork],
+  product: [renderProduct],
+  category: [renderCategory],
+  schema: [renderSchema],
+  social: [renderSocial],
+  compare: [renderCompare],
+  rules: [renderRules],
+  profiles: [renderProfiles],
+  multitab: [renderMultiTab],
+  crawler: [renderCrawler],
+});
+
+const panelDirty = new Set(Object.keys(PANEL_RENDERERS));
+let activePanelName = 'overview';
+
 function runtimeErrorInfo(error) {
   if (typeof ContentConnection !== 'undefined' && ContentConnection && typeof ContentConnection.safeError === 'function') {
     return ContentConnection.safeError(error);
@@ -44,43 +70,69 @@ function safeRender(section, renderer) {
   }
 }
 
+function uiErrorSuffix() {
+  const count = Array.isArray(state.uiErrors) ? state.uiErrors.length : 0;
+  if (!count) return '';
+  return `${count} Inspector UI section${count === 1 ? '' : 's'} failed`;
+}
+
+function refreshUiErrorStatus() {
+  const suffix = uiErrorSuffix();
+  if (state.report) {
+    safeRender('header', renderHeader);
+    if (suffix) statusCounts.textContent = statusCounts.textContent ? `${statusCounts.textContent} · ${suffix}` : suffix;
+    return;
+  }
+  if (suffix) setStatus('Inspector UI error', `${suffix}. Other sections remain available; use Refresh to retry.`);
+}
+
+function markPanelDirty(name) {
+  if (Object.prototype.hasOwnProperty.call(PANEL_RENDERERS, name)) panelDirty.add(name);
+}
+
+function markAllPanelsDirty() {
+  Object.keys(PANEL_RENDERERS).forEach((name) => panelDirty.add(name));
+}
+
+function renderPanel(name, options) {
+  const renderers = PANEL_RENDERERS[name];
+  if (!renderers) return false;
+  const opts = options || {};
+  if (!opts.force && !panelDirty.has(name)) return true;
+
+  if (!Array.isArray(state.uiErrors)) state.uiErrors = [];
+  state.uiErrors = state.uiErrors.filter((item) => item && item.section !== name);
+
+  let ok = true;
+  renderers.forEach((renderer) => {
+    if (!safeRender(name, renderer)) ok = false;
+  });
+  if (ok) panelDirty.delete(name);
+  else panelDirty.add(name);
+
+  if (!opts.skipStatusRefresh) refreshUiErrorStatus();
+  return ok;
+}
+
 function renderAll() {
   state.uiErrors = [];
+  markAllPanelsDirty();
   safeRender('header', renderHeader);
-  safeRender('overview', renderOverview);
-  safeRender('indexability', renderIndexability);
-  safeRender('performance', renderPerformance);
-  safeRender('performance', renderPerformanceHints);
-  safeRender('performance', renderAssetAudit);
-  safeRender('performance', renderThirdPartyAudit);
-  safeRender('content', renderContent);
-  safeRender('security', renderSecurity);
-  safeRender('serp', renderSerp);
-  safeRender('hreflang', renderHreflang);
-  safeRender('issues', renderIssues);
-  safeRender('headings', renderHeadings);
-  safeRender('links', renderLinks);
-  safeRender('images', renderImagesNetwork);
-  safeRender('product', renderProduct);
-  safeRender('category', renderCategory);
-  safeRender('schema', renderSchema);
-  safeRender('social', renderSocial);
-  safeRender('compare', renderCompare);
-  safeRender('rules', renderRules);
-  safeRender('profiles', renderProfiles);
-  safeRender('multitab', renderMultiTab);
-  safeRender('crawler', renderCrawler);
+  renderPanel(activePanelName, { force: true, skipStatusRefresh: true });
 
-  if (state.uiErrors.length) {
-    const suffix = `${state.uiErrors.length} Inspector UI section${state.uiErrors.length === 1 ? '' : 's'} failed`;
+  const suffix = uiErrorSuffix();
+  if (suffix) {
     if (state.report) statusCounts.textContent = statusCounts.textContent ? `${statusCounts.textContent} · ${suffix}` : suffix;
     else setStatus('Inspector UI error', `${suffix}. Other sections remain available; use Refresh to retry.`);
   }
 }
 
 function activateTab(name) {
+  if (!Object.prototype.hasOwnProperty.call(PANEL_RENDERERS, name)) return;
+  activePanelName = name;
   document.querySelectorAll('.tab').forEach((button) => button.classList.toggle('active', button.dataset.tab === name));
   document.querySelectorAll('.panel').forEach((panel) => panel.classList.toggle('active', panel.id === name));
+  renderPanel(name);
 }
 
 function handleAsyncUiFailure(scope, error) {
