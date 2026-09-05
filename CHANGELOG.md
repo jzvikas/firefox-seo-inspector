@@ -47,6 +47,13 @@ All notable changes to this project are documented here.
 - Performance regression detection for request count, known bytes, third-party load, DOM size/depth, TTFB, and navigation duration using both absolute and relative thresholds to suppress normal measurement noise.
 - On-demand link/image failure counts are compared only when both snapshots contain results from the corresponding network check, preventing missing checks from becoming false zero-error baselines.
 - Automated regression tests covering snapshot-v2 capture, noindex/indexability changes, checked-network gating, image/schema/HTTP/security regressions, performance noise thresholds, improvements, direction summaries, and version-1 compatibility.
+- Current-tab versus another-open-tab comparison using the existing rendered-page content script with no extra page request.
+- Explicit URL A versus URL B raw-HTML comparison using credential-free/no-referrer GET requests, redirects, a 12-second timeout, and a 2 MiB HTML response limit per URL.
+- Side-by-side page comparison for metadata, status, score, robots/indexability, headings, links and rel states, images, schema, hreflang, SEO/security response headers, and issue counts/IDs.
+- Diff-only page comparison mode with bounded detail inventories capped at 80 items and 160 characters per detail value.
+- URL comparison preserves HTML error responses such as 404/500 pages, rejects non-HTML responses, uses the final URL as the parsed document base, and never executes fetched page scripts in the comparison parser.
+- Page comparison context resets rendered tab results when the current tab or its URL changes, including SPA navigation.
+- Automated tests for page-comparison summaries, deterministic/equal diffs, security and SEO headers, stable issue IDs, bounded inventories, text limits, and schema-type normalization.
 
 ## [0.2.0] - 2026-09-05
 
