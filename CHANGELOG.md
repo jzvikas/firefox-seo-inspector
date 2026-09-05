@@ -13,6 +13,9 @@ All notable changes to this project are documented here.
 - Canonical diagnostics for cross-domain, protocol, hostname, trailing-slash, and query-string mismatches.
 - Raw HTML versus rendered DOM indexability comparison for robots directives, canonical changes, and verdict changes.
 - Automated tests for indexability precedence, robots conflicts, canonical diagnostics, redirects, loop detection, robots.txt integration input, and raw/rendered differences.
+- Automatic, cached `robots.txt` discovery with Googlebot-specific Allow/Disallow evaluation, matching-rule reporting, parser warnings, redirects, HTTP status, and sitemap declaration discovery.
+- Bounded on-demand sitemap scanning with sitemap-index traversal, URL membership checks, `lastmod`, gzip support when available, cancellation, document/byte limits, and scan timeouts.
+- Pure robots.txt and sitemap XML parsers with automated tests for wildcard/end-anchor rules, user-agent precedence, Allow/Disallow precedence, XML entities, CDATA, sitemap indexes, and URL membership.
 
 ## [0.1.0] - 2026-09-05
 
