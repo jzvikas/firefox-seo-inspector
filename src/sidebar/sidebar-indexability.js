@@ -39,7 +39,35 @@ function renderIndexability() {
   analysis.reasons.forEach((item) => {
     addRow(verdictCard, item.label, item.detail || 'Detected');
   });
+
+  const rawActions = el('div', 'toolbar');
+  const rawButton = el('button', '', 'Compare raw HTML');
+  rawButton.type = 'button';
+  rawButton.addEventListener('click', async () => {
+    rawButton.disabled = true;
+    rawButton.textContent = 'Fetching…';
+    try {
+      const rawReport = await sendToTab({ type: 'seoInspector.fetchRaw' });
+      state.indexabilityRawDiff = Indexability.diff(analysis, rawReport.evaluation.indexability);
+    } catch (_error) {
+      state.indexabilityRawDiff = null;
+    }
+    renderIndexability();
+  });
+  rawActions.appendChild(rawButton);
+  verdictCard.appendChild(rawActions);
   panel.appendChild(verdictCard);
+
+  const rawDiffCard = el('div', 'card');
+  rawDiffCard.appendChild(el('div', 'card-header', 'Rendered DOM vs raw HTML'));
+  if (state.indexabilityRawDiff === null) rawDiffCard.appendChild(el('div', 'empty', 'Raw indexability comparison failed.'));
+  else if (Array.isArray(state.indexabilityRawDiff) && !state.indexabilityRawDiff.length) rawDiffCard.appendChild(el('div', 'empty', 'No indexability differences found.'));
+  else if (Array.isArray(state.indexabilityRawDiff)) {
+    state.indexabilityRawDiff.forEach((change) => {
+      addRow(rawDiffCard, change.field, `Rendered: ${formatDirectiveList(Array.isArray(change.rendered) ? change.rendered : [change.rendered])} | Raw: ${formatDirectiveList(Array.isArray(change.raw) ? change.raw : [change.raw])}`);
+    });
+  } else rawDiffCard.appendChild(el('div', 'empty', 'Run raw HTML comparison when needed.'));
+  panel.appendChild(rawDiffCard);
 
   panel.appendChild(card('Directives', [
     ['Meta robots', formatDirectiveList(analysis.directives.meta)],
