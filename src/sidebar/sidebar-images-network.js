@@ -131,13 +131,13 @@ function renderImagesNetwork() {
   const checkButton = el('button', '', imageNetworkState.checking ? 'Checking images…' : 'Check image network');
   checkButton.type = 'button';
   checkButton.disabled = imageNetworkState.checking;
-  checkButton.addEventListener('click', () => startImageNetworkCheck(images));
+  checkButton.addEventListener('click', () => startImageNetworkCheck(images).catch((error) => handleAsyncUiFailure('image-network-check', error)));
   toolbar.appendChild(checkButton);
 
   if (imageNetworkState.checking) {
     const cancelButton = el('button', '', 'Cancel');
     cancelButton.type = 'button';
-    cancelButton.addEventListener('click', () => cancelImageNetworkCheck());
+    cancelButton.addEventListener('click', () => cancelImageNetworkCheck().catch((error) => handleAsyncUiFailure('image-network-cancel', error)));
     toolbar.appendChild(cancelButton);
   }
 
