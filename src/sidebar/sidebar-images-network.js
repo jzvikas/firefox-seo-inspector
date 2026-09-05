@@ -1,5 +1,8 @@
 'use strict';
 
+const IMAGE_RENDER_BATCH = 100;
+const IMAGE_RENDER_MAX = 500;
+
 const imageNetworkState = {
   pageUrl: '',
   response: null,
@@ -7,6 +10,7 @@ const imageNetworkState = {
   checking: false,
   error: null,
   sort: 'waste',
+  visibleLimit: IMAGE_RENDER_BATCH,
 };
 
 function resetImageNetworkState(pageUrl) {
@@ -16,6 +20,7 @@ function resetImageNetworkState(pageUrl) {
   imageNetworkState.checking = false;
   imageNetworkState.error = null;
   imageNetworkState.sort = 'waste';
+  imageNetworkState.visibleLimit = IMAGE_RENDER_BATCH;
 }
 
 async function startImageNetworkCheck(images) {
@@ -84,6 +89,28 @@ function imageRowsForDisplay(analysis) {
   return rows;
 }
 
+function appendImageRenderPager(panel, total) {
+  const renderCap = Math.min(total, IMAGE_RENDER_MAX);
+  const shown = Math.min(imageNetworkState.visibleLimit, renderCap);
+  if (shown < renderCap) {
+    const controls = el('div', 'toolbar');
+    const next = Math.min(IMAGE_RENDER_BATCH, renderCap - shown);
+    const more = el('button', '', `Show next ${next} images`);
+    more.type = 'button';
+    more.addEventListener('click', () => {
+      imageNetworkState.visibleLimit = Math.min(IMAGE_RENDER_MAX, imageNetworkState.visibleLimit + IMAGE_RENDER_BATCH);
+      renderImagesNetwork();
+    });
+    controls.appendChild(more);
+    controls.appendChild(el('span', 'muted', `Rendering ${shown} of ${total} images.`));
+    panel.appendChild(controls);
+    return;
+  }
+  if (total > IMAGE_RENDER_MAX) {
+    panel.appendChild(el('div', 'muted', `Rendering is capped at ${IMAGE_RENDER_MAX} of ${total} images to keep the Inspector responsive. Full image data remains available to audit logic and exports.`));
+  }
+}
+
 function renderImagesNetwork() {
   const panel = document.getElementById('images');
   clear(panel);
@@ -124,6 +151,7 @@ function renderImagesNetwork() {
   }
   sort.addEventListener('change', () => {
     imageNetworkState.sort = sort.value;
+    imageNetworkState.visibleLimit = IMAGE_RENDER_BATCH;
     renderImagesNetwork();
   });
   toolbar.appendChild(sort);
@@ -164,7 +192,9 @@ function renderImagesNetwork() {
   table.appendChild(head);
   const body = document.createElement('tbody');
 
-  imageRowsForDisplay(analysis).slice(0, 500).forEach((rowData) => {
+  const rows = imageRowsForDisplay(analysis);
+  const renderLimit = Math.min(imageNetworkState.visibleLimit, IMAGE_RENDER_MAX);
+  rows.slice(0, renderLimit).forEach((rowData) => {
     const image = rowData.image;
     const row = document.createElement('tr');
     const statusCell = el('td', rowData.statusLevel === 'critical' ? 'serp-metric-bad' : '', rowData.statusLabel);
@@ -185,7 +215,7 @@ function renderImagesNetwork() {
   table.appendChild(body);
   wrap.appendChild(table);
   panel.appendChild(wrap);
-  if (analysis.rows.length > 500) panel.appendChild(el('div', 'muted', `Showing first 500 of ${analysis.rows.length} images.`));
+  appendImageRenderPager(panel, rows.length);
 
   const note = el('div', 'card');
   note.appendChild(el('div', 'card-header', 'About estimated waste'));
