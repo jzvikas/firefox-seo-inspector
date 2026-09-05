@@ -85,27 +85,24 @@ test('models and runtime recovery load before renderers and main', () => {
   assert.ok(main > imagesRules);
 });
 
-test('Product Category Rules Profiles Tabs and Crawler panels stay in sync with renderAll boundaries', () => {
+test('Product Category Rules Profiles Tabs and Crawler panels stay in sync with lazy renderer registry', () => {
   const html = fs.readFileSync(sidebarPath, 'utf8');
   const main = read('src/sidebar/sidebar-main.js');
-  assert.match(html, /data-tab="product"/);
-  assert.match(html, /<section id="product" class="panel"><\/section>/);
-  assert.match(main, /safeRender\('product',\s*renderProduct\)/);
-  assert.match(html, /data-tab="category"/);
-  assert.match(html, /<section id="category" class="panel"><\/section>/);
-  assert.match(main, /safeRender\('category',\s*renderCategory\)/);
-  assert.match(html, /data-tab="rules"/);
-  assert.match(html, /<section id="rules" class="panel"><\/section>/);
-  assert.match(main, /safeRender\('rules',\s*renderRules\)/);
-  assert.match(html, /data-tab="profiles"/);
-  assert.match(html, /<section id="profiles" class="panel"><\/section>/);
-  assert.match(main, /safeRender\('profiles',\s*renderProfiles\)/);
-  assert.match(html, /data-tab="multitab"/);
-  assert.match(html, /<section id="multitab" class="panel"><\/section>/);
-  assert.match(main, /safeRender\('multitab',\s*renderMultiTab\)/);
-  assert.match(html, /data-tab="crawler"/);
-  assert.match(html, /<section id="crawler" class="panel"><\/section>/);
-  assert.match(main, /safeRender\('crawler',\s*renderCrawler\)/);
+  const expected = [
+    ['product', 'renderProduct'],
+    ['category', 'renderCategory'],
+    ['rules', 'renderRules'],
+    ['profiles', 'renderProfiles'],
+    ['multitab', 'renderMultiTab'],
+    ['crawler', 'renderCrawler'],
+  ];
+  expected.forEach(([panel, renderer]) => {
+    assert.match(html, new RegExp(`data-tab="${panel}"`));
+    assert.match(html, new RegExp(`<section id="${panel}" class="panel"><\\/section>`));
+    assert.match(main, new RegExp(`${panel}:\\s*\\[${renderer}\\]`));
+  });
+  assert.match(main, /function renderPanel\(name, options\)/);
+  assert.match(main, /renderPanel\(activePanelName, \{ force: true, skipStatusRefresh: true \}\)/);
 });
 
 test('content script loads page type product category and policy dependencies before content bootstrap', () => {

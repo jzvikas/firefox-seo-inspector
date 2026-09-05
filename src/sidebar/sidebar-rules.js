@@ -240,5 +240,3 @@ function renderRules() {
   rulesEditorRefs = editor.refs;
   editor.nodes.forEach((node) => panel.appendChild(node));
 }
-
-loadRulesUiConfig().catch(() => {});

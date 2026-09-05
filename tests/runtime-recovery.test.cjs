@@ -207,11 +207,13 @@ test('content bootstrap is guarded against duplicate injection and exposes a pin
   assert.match(content, /message\.type === 'seoInspector\.ping'/);
 });
 
-test('sidebar main isolates renderer failures and captures unhandled async failures', () => {
+test('sidebar main isolates lazy renderer failures and captures unhandled async failures', () => {
   const main = source('src/sidebar/sidebar-main.js');
   assert.match(main, /function safeRender\(section, renderer\)/);
-  assert.match(main, /safeRender\('overview', renderOverview\)/);
-  assert.match(main, /safeRender\('category', renderCategory\)/);
+  assert.match(main, /overview:\s*\[renderOverview\]/);
+  assert.match(main, /category:\s*\[renderCategory\]/);
+  assert.match(main, /function renderPanel\(name, options\)/);
+  assert.match(main, /renderPanel\(activePanelName, \{ force: true, skipStatusRefresh: true \}\)/);
   assert.match(main, /window\.addEventListener\('unhandledrejection'/);
   assert.match(main, /event\.preventDefault\(\)/);
   assert.match(main, /refreshSafely\('startup'\)/);

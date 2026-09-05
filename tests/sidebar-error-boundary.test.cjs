@@ -31,7 +31,7 @@ function flattenText(root, output) {
   return result;
 }
 
-test('one renderer exception is isolated and later Inspector panels still render', async () => {
+test('one lazy renderer exception is isolated and later Inspector panels still render', async () => {
   const panels = new Map();
   const ids = [
     'overview', 'indexability', 'performance', 'content', 'security', 'serp', 'hreflang', 'issues',
@@ -123,14 +123,26 @@ test('one renderer exception is isolated and later Inspector panels still render
   await Promise.resolve();
   vm.runInContext('renderAll()', context);
 
+  assert.ok(rendered.includes('overview'));
+  assert.equal(rendered.includes('category'), false);
+  assert.equal(rendered.includes('schema'), false);
+  assert.equal(rendered.includes('crawler'), false);
+  assert.equal(context.state.uiErrors.length, 0);
+
+  vm.runInContext("activateTab('category')", context);
   assert.ok(rendered.includes('category'));
-  assert.ok(rendered.includes('schema'));
-  assert.ok(rendered.includes('crawler'));
   assert.equal(context.state.uiErrors.length, 1);
   assert.equal(context.state.uiErrors[0].section, 'category');
   assert.equal(context.state.runtimeErrors.length, 1);
   assert.match(flattenText(panels.get('category')).join(' '), /Inspector UI section failed|category renderer failed/);
   assert.match(statusCounts.textContent, /1 Inspector UI section failed/);
+
+  vm.runInContext("activateTab('schema')", context);
+  vm.runInContext("activateTab('crawler')", context);
+  assert.ok(rendered.includes('schema'));
+  assert.ok(rendered.includes('crawler'));
+  assert.equal(context.state.uiErrors.length, 1);
+  assert.equal(context.state.uiErrors[0].section, 'category');
 
   assert.equal(windowListeners.has('unhandledrejection'), true);
   let prevented = false;

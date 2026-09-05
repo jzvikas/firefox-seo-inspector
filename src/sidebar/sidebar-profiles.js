@@ -331,5 +331,3 @@ function renderProfiles() {
   editor.nodes.forEach((node) => panel.appendChild(node));
   appendSavedProfiles(panel);
 }
-
-loadProfilesStore().catch(() => {});
