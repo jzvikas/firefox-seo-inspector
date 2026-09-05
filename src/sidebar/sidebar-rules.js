@@ -5,6 +5,7 @@ const rulesUiState = {
   loading: false,
   message: '',
   error: '',
+  schemaStatus: null,
 };
 
 let rulesEditorRefs = null;
@@ -13,6 +14,7 @@ async function loadRulesUiConfig() {
   if (rulesUiState.loading) return;
   rulesUiState.loading = true;
   try {
+    rulesUiState.schemaStatus = await ensureStorageSchemaReady(false);
     const stored = await browser.storage.local.get(CustomRules.STORAGE_KEY);
     rulesUiState.config = CustomRules.normalize(stored && stored[CustomRules.STORAGE_KEY]);
     rulesUiState.error = '';
@@ -172,14 +174,15 @@ async function saveRulesFromEditor() {
   }
   const config = CustomRules.normalize(raw);
   try {
+    rulesUiState.schemaStatus = await requireWritableStorageSchema();
     await browser.storage.local.set({ [CustomRules.STORAGE_KEY]: config });
     rulesUiState.config = config;
     rulesUiState.error = '';
     rulesUiState.message = 'Rules saved locally. Re-running the audit…';
     renderRules();
     await refresh();
-  } catch (_error) {
-    rulesUiState.error = 'Could not save custom rules.';
+  } catch (error) {
+    rulesUiState.error = storageSchemaReadOnlyMessage(rulesUiState.schemaStatus) || (error && error.message) || 'Could not save custom rules.';
     rulesUiState.message = '';
     renderRules();
   }
@@ -187,14 +190,15 @@ async function saveRulesFromEditor() {
 
 async function resetRulesToDefaults() {
   try {
+    rulesUiState.schemaStatus = await requireWritableStorageSchema();
     await browser.storage.local.remove(CustomRules.STORAGE_KEY);
     rulesUiState.config = CustomRules.normalize(null);
     rulesUiState.error = '';
     rulesUiState.message = 'Defaults restored. Re-running the audit…';
     renderRules();
     await refresh();
-  } catch (_error) {
-    rulesUiState.error = 'Could not reset custom rules.';
+  } catch (error) {
+    rulesUiState.error = storageSchemaReadOnlyMessage(rulesUiState.schemaStatus) || (error && error.message) || 'Could not reset custom rules.';
     renderRules();
   }
 }
@@ -206,20 +210,25 @@ function renderRules() {
 
   if (!rulesUiState.config && !rulesUiState.loading) loadRulesUiConfig().catch(() => {});
   const config = activeRulesConfig();
+  const writable = storageSchemaIsWritable();
 
   const toolbar = el('div', 'toolbar');
   const save = el('button', '', 'Save rules');
   save.type = 'button';
+  save.disabled = !writable;
   save.addEventListener('click', () => saveRulesFromEditor());
   toolbar.appendChild(save);
   const reset = el('button', '', 'Reset defaults');
   reset.type = 'button';
+  reset.disabled = !writable;
   reset.addEventListener('click', () => resetRulesToDefaults());
   toolbar.appendChild(reset);
   toolbar.appendChild(badge(`Rules v${config.version}`, 'ok'));
   panel.appendChild(toolbar);
 
-  if (rulesUiState.error) panel.appendChild(el('div', 'issue critical', rulesUiState.error));
+  const readOnly = storageSchemaReadOnlyMessage(rulesUiState.schemaStatus);
+  if (readOnly) panel.appendChild(el('div', 'issue warning', readOnly));
+  if (rulesUiState.error && rulesUiState.error !== readOnly) panel.appendChild(el('div', 'issue critical', rulesUiState.error));
   if (rulesUiState.message) panel.appendChild(el('div', 'issue info', rulesUiState.message));
 
   const intro = el('div', 'card');
