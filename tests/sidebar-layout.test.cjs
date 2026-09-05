@@ -28,34 +28,39 @@ test('every sidebar script and stylesheet reference exists on disk', () => {
   }
 });
 
-test('custom rules domain profiles and multi-tab model load before their renderers and main bootstrap', () => {
+test('custom rules profiles multi-tab and crawler models load before renderers and main', () => {
   const html = fs.readFileSync(sidebarPath, 'utf8');
   const scripts = scriptSources(html);
   const customRules = scripts.indexOf('../lib/custom-rules.js');
   const domainProfiles = scripts.indexOf('../lib/domain-profiles.js');
   const multiTabModel = scripts.indexOf('../lib/multi-tab-audit.js');
+  const crawlerModel = scripts.indexOf('../lib/crawler-lite.js');
   const imagesNetwork = scripts.indexOf('sidebar-images-network.js');
   const imagesRules = scripts.indexOf('sidebar-images-rules.js');
   const rules = scripts.indexOf('sidebar-rules.js');
   const profiles = scripts.indexOf('sidebar-profiles.js');
   const multiTab = scripts.indexOf('sidebar-multi-tab.js');
+  const crawler = scripts.indexOf('sidebar-crawler.js');
   const main = scripts.indexOf('sidebar-main.js');
   assert.ok(customRules >= 0);
   assert.ok(domainProfiles > customRules);
   assert.ok(multiTabModel >= 0);
+  assert.ok(crawlerModel >= 0);
   assert.ok(imagesNetwork >= 0);
   assert.ok(imagesRules > imagesNetwork);
   assert.ok(rules > customRules);
   assert.ok(profiles > domainProfiles);
   assert.ok(profiles > rules);
   assert.ok(multiTab > multiTabModel);
+  assert.ok(crawler > crawlerModel);
   assert.ok(main > rules);
   assert.ok(main > profiles);
   assert.ok(main > multiTab);
+  assert.ok(main > crawler);
   assert.ok(main > imagesRules);
 });
 
-test('Rules Profiles and Tabs panels stay in sync with renderAll', () => {
+test('Rules Profiles Tabs and Crawler panels stay in sync with renderAll', () => {
   const html = fs.readFileSync(sidebarPath, 'utf8');
   const main = read('src/sidebar/sidebar-main.js');
   assert.match(html, /data-tab="rules"/);
@@ -67,6 +72,9 @@ test('Rules Profiles and Tabs panels stay in sync with renderAll', () => {
   assert.match(html, /data-tab="multitab"/);
   assert.match(html, /<section id="multitab" class="panel"><\/section>/);
   assert.match(main, /\brenderMultiTab\(\);/);
+  assert.match(html, /data-tab="crawler"/);
+  assert.match(html, /<section id="crawler" class="panel"><\/section>/);
+  assert.match(main, /\brenderCrawler\(\);/);
 });
 
 test('content script loads CustomRules and DomainProfiles before content bootstrap', () => {
@@ -78,6 +86,12 @@ test('content script loads CustomRules and DomainProfiles before content bootstr
   assert.ok(rules >= 0);
   assert.ok(profiles > rules);
   assert.ok(content > profiles);
+});
+
+test('crawler background is registered and adds no new permission', () => {
+  const manifest = JSON.parse(read('src/manifest.json'));
+  assert.ok(manifest.background.scripts.includes('background/crawler-background.js'));
+  assert.deepEqual(manifest.permissions.slice().sort(), ['storage', 'tabs', 'webRequest']);
 });
 
 test('Profiles source remains public-safe and does not embed configured hostnames', () => {
