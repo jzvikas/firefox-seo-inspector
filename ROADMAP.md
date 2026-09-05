@@ -121,9 +121,9 @@ Goal: explain what makes a page heavy, fragile, or technically weak.
 
 ### Third-party resources
 
-- [ ] Group requests by third-party domain.
-- [ ] Show requests and bytes per domain.
-- [ ] Identify common analytics, tag-manager, widget, ad, and CDN patterns locally.
+- [x] Group requests by third-party domain.
+- [x] Show requests and bytes per domain.
+- [x] Identify common analytics, tag-manager, widget, ad, and CDN patterns locally.
 
 ### Content inspection
 
