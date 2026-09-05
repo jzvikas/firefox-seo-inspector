@@ -19,7 +19,18 @@ function renderNoReportStatus(title, detail) {
   setStatus(title, detail);
 }
 
+function beginRefreshGeneration() {
+  const next = (Number(state.refreshGeneration) || 0) + 1;
+  state.refreshGeneration = next;
+  return next;
+}
+
+function refreshIsCurrent(generation) {
+  return Number(state.refreshGeneration) === Number(generation);
+}
+
 refresh = async function refreshWithContentRecovery() {
+  const generation = beginRefreshGeneration();
   setStatus('Analyzing…', '');
   resetRefreshState();
 
@@ -27,11 +38,13 @@ refresh = async function refreshWithContentRecovery() {
   try {
     tab = await activeTab();
   } catch (error) {
+    if (!refreshIsCurrent(generation)) return;
     state.tabId = null;
     state.lastRuntimeError = ContentConnection.safeError(error);
     renderNoReportStatus('Tab access failed', 'The Inspector could not read the active browser tab. Try reopening the Inspector window.');
     return;
   }
+  if (!refreshIsCurrent(generation)) return;
 
   state.tabId = tab && typeof tab.id === 'number' ? tab.id : null;
   pageUrl.textContent = tab && tab.url ? tab.url : '';
@@ -43,12 +56,13 @@ refresh = async function refreshWithContentRecovery() {
     return;
   }
 
+  const targetTabId = state.tabId;
   let connection;
   try {
     const manifest = browser.runtime && typeof browser.runtime.getManifest === 'function'
       ? browser.runtime.getManifest()
       : null;
-    connection = await ContentConnection.ensure(browser, state.tabId, manifest);
+    connection = await ContentConnection.ensure(browser, targetTabId, manifest);
   } catch (error) {
     connection = {
       ok: false,
@@ -56,6 +70,7 @@ refresh = async function refreshWithContentRecovery() {
       error: ContentConnection.safeError(error),
     };
   }
+  if (!refreshIsCurrent(generation)) return;
   state.connection = connection;
 
   if (!connection || !connection.ok) {
@@ -71,12 +86,14 @@ refresh = async function refreshWithContentRecovery() {
 
   let report;
   try {
-    report = await sendToTab({ type: 'seoInspector.analyze' });
+    report = await browser.tabs.sendMessage(targetTabId, { type: 'seoInspector.analyze' });
   } catch (error) {
+    if (!refreshIsCurrent(generation)) return;
     state.lastRuntimeError = ContentConnection.safeError(error);
     renderNoReportStatus('Audit failed', 'The page connection is active, but the audit did not complete. Use Refresh; if it repeats, this is an Inspector runtime error rather than a page reload issue.');
     return;
   }
+  if (!refreshIsCurrent(generation)) return;
 
   if (!report || !report.facts || !report.evaluation) {
     state.lastRuntimeError = { name: 'AuditError', message: 'Content script returned an incomplete audit report.' };
@@ -90,6 +107,7 @@ refresh = async function refreshWithContentRecovery() {
     url: report.facts.url,
     userAgent: 'Googlebot',
   }).catch(() => null);
+  if (!refreshIsCurrent(generation)) return;
   if (robotsReport) {
     state.robotsReport = robotsReport;
     report.robotsTxt = robotsReport;
@@ -99,6 +117,7 @@ refresh = async function refreshWithContentRecovery() {
       { robotsTxt: robotsReport },
     );
   }
-  await sendToTab({ type: 'seoInspector.watch', enabled: true }).catch(() => {});
+  await browser.tabs.sendMessage(targetTabId, { type: 'seoInspector.watch', enabled: true }).catch(() => {});
+  if (!refreshIsCurrent(generation)) return;
   renderAll();
 };
