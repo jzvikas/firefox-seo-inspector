@@ -1,5 +1,22 @@
 'use strict';
 
+function syncCustomImageSizeIssue(analysis, config) {
+  if (!state.report || !state.report.evaluation) return null;
+  const evaluation = state.report.evaluation;
+  const current = Array.isArray(evaluation.issues) ? evaluation.issues : [];
+  const withoutImageSize = current.filter((item) => item.id !== 'images.fileSize');
+  const issue = CustomRules.imageSizeIssue(analysis, config);
+  const next = issue ? withoutImageSize.concat(issue) : withoutImageSize;
+  if (JSON.stringify(current) !== JSON.stringify(next)) {
+    evaluation.issues = next;
+    evaluation.score = CustomRules.scoreIssues(next);
+    evaluation.severityCounts = CustomRules.severityCounts(next);
+    renderHeader();
+    renderIssues();
+  }
+  return issue;
+}
+
 const renderImagesNetworkWithoutRules = renderImagesNetwork;
 renderImagesNetwork = function renderImagesNetworkWithRules() {
   renderImagesNetworkWithoutRules();
@@ -18,7 +35,7 @@ renderImagesNetwork = function renderImagesNetworkWithRules() {
     ? CustomRules.normalize(state.report.customRules)
     : CustomRules.normalize(null);
   const limit = config.thresholds.imageMaxBytes;
-  const issue = CustomRules.imageSizeIssue(analysis, config);
+  const issue = syncCustomImageSizeIssue(analysis, config);
   const known = analysis.rows.filter((row) => Number(row.sizeBytes) > 0).length;
   const exceeded = analysis.rows.filter((row) => Number(row.sizeBytes) > limit).length;
 
