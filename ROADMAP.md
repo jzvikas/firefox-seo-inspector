@@ -101,14 +101,14 @@ Goal: explain what makes a page heavy, fragile, or technically weak.
 
 ### Web performance hints
 
-- [ ] Likely LCP candidate.
-- [ ] CLS risk hints.
-- [ ] Missing image dimensions.
-- [ ] Above-the-fold lazy-loading warning.
-- [ ] Below-the-fold eager-loading warning.
-- [ ] Preload, preconnect, prefetch, and DNS-prefetch inspection.
-- [ ] Render-blocking resource hints.
-- [ ] Font loading hints.
+- [x] Likely LCP candidate.
+- [x] CLS risk hints.
+- [x] Missing image dimensions.
+- [x] Above-the-fold lazy-loading warning.
+- [x] Below-the-fold eager-loading warning.
+- [x] Preload, preconnect, prefetch, and DNS-prefetch inspection.
+- [x] Render-blocking resource hints.
+- [x] Font loading hints.
 
 ### JavaScript and CSS
 
