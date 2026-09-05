@@ -65,7 +65,7 @@ test('URL A/B comparison cancellation aborts both in-flight requests', async () 
   assert.equal(result.limits.scanTimeoutMs, 15000);
 });
 
-test('authenticated raw HTML fetch is byte-bounded, timed, and cancellable', () => {
+test('authenticated raw HTML fetch is byte-bounded, timed, cancellable, and tab-pinned', () => {
   const content = source('src/content/content.js');
   assert.match(content, /RAW_SOURCE_MAX_BYTES\s*=\s*2\s*\*\s*1024\s*\*\s*1024/);
   assert.match(content, /RAW_SOURCE_TIMEOUT_MS\s*=\s*12000/);
@@ -79,6 +79,9 @@ test('authenticated raw HTML fetch is byte-bounded, timed, and cancellable', () 
   const sidebar = source('src/sidebar/sidebar-content.js');
   assert.match(sidebar, /Cancel raw HTML/);
   assert.match(sidebar, /seoInspector\.cancelRaw/);
+  assert.match(sidebar, /browser\.tabs\.sendMessage\(sourceTabId/);
+  assert.match(sidebar, /rawSourceStillCurrent\(operationId, sourceTabId, sourceUrl\)/);
+  assert.match(sidebar, /state\.tabId === tabId/);
   assert.match(sidebar, /2 MiB/);
   assert.match(sidebar, /12-second timeout/);
 
