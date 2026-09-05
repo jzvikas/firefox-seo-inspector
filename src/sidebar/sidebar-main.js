@@ -9,6 +9,7 @@ function renderAll() {
   renderAssetAudit();
   renderThirdPartyAudit();
   renderContent();
+  renderSecurity();
   renderSerp();
   renderHreflang();
   renderIssues();
