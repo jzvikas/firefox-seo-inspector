@@ -53,6 +53,19 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - JSON report export and copyable issue list.
 - No telemetry, analytics, remote runtime scripts, accounts, or backend.
 
+## Unreleased v0.3 work
+
+### Performance overview
+
+- DOM element count and maximum DOM depth.
+- Observed page request count and known transferred/encoded bytes.
+- Request/byte breakdown for HTML, JavaScript, CSS, images, fonts, Fetch/XHR, media, and other resources.
+- First-party versus third-party request and known-byte summary.
+- Navigation Timing details including TTFB, DNS, connect/TLS, response download, DOMContentLoaded, load event, protocol, redirects, and HTML size.
+- Largest-resource and slowest-resource rankings.
+- Bounded Resource Timing table with URL, type, start time, duration, host, and size.
+- Unknown transfer sizes remain explicitly unknown instead of being guessed.
+
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestone focuses on performance/resources, content diagnostics, link-audit improvements, and security headers.
@@ -74,6 +87,8 @@ A prebuilt unsigned package is also kept in `dist/`. Stable Firefox generally re
 The extension requests access to HTTP and HTTPS pages because its job is to inspect the active page and, only when required by a feature, check related URLs. The `webRequest` permission is used read-only to capture SEO-relevant response metadata and redirect hops.
 
 External link, image, canonical, hreflang, and sitemap checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. `robots.txt` discovery is a single size/time-bounded request and is cached briefly.
+
+The Performance panel reads the browser's local Navigation Timing and Resource Timing entries. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated.
 
 **Compare raw HTML** is intentionally different: when explicitly requested, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
 
