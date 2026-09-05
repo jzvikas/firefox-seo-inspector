@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "Firefox SEO Inspector",
+  "version": "0.1.0",
+  "description": "A local-first technical SEO inspector for Firefox with page audits, highlighting, link checks, structured data inspection, and snapshot comparison.",
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "scripts": [
+      "background/background.js"
+    ]
+  },
+  "action": {
+    "default_title": "Open Firefox SEO Inspector",
+    "default_icon": "icons/icon.svg"
+  },
+  "sidebar_action": {
+    "default_title": "Firefox SEO Inspector",
+    "default_panel": "sidebar/sidebar.html",
+    "default_icon": "icons/icon.svg",
+    "open_at_install": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "lib/seo-core.js",
+        "lib/page-extractor.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "strict_min_version": "142.0",
+      "id": "{5d80a5ca-59f6-44b9-9922-36618ca3d72d}",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  }
+}

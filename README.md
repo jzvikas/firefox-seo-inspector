@@ -19,6 +19,8 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 
 ## Install for development
 
+Requires Firefox 142 or newer.
+
 1. Clone or download this repository.
 2. Open `about:debugging#/runtime/this-firefox` in Firefox.
 3. Choose **Load Temporary Add-on**.
@@ -59,7 +61,7 @@ The build is deterministic. `npm run build` creates the current unsigned XPI and
 - Public source must not contain credentials, private domains, local filesystem paths, customer/project identifiers, or private infrastructure details.
 - Runtime code must not load remote JavaScript or use `eval`/`new Function`.
 - User-visible changes must update `CHANGELOG.md`.
-- The committed `dist/` package must match the source for the same version.
+- The committed `dist/` package must match the source for the same version; CI rebuilds and commits stale generated artifacts on non-main branch pushes.
 - CI runs static checks first, then unit tests, Mozilla `web-ext` validation, and deterministic build verification.
 
 ## License

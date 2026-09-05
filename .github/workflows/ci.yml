@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Static, manifest, and privacy checks
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Mozilla web-ext lint
+        run: npx --yes web-ext@10.6.0 lint --source-dir src
+
+      - name: Build deterministic XPI
+        run: npm run build
+
+      - name: Verify XPI contents and checksum
+        run: npm run verify:build
+
+      - name: Commit generated extension on branch pushes
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        run: |
+          if ! git diff --quiet -- dist/; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add dist/
+            git commit -m 'chore: rebuild extension'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Verify committed build is current
+        run: git diff --exit-code -- dist/
