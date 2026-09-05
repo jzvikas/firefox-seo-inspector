@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import zlib from 'node:zlib';
 
 const srcRoot = path.resolve('src');
 const distRoot = path.resolve('dist');
@@ -47,16 +46,18 @@ function buildZip(files) {
 
   for (const file of files) {
     const name = Buffer.from(file.name, 'utf8');
-    const compressed = zlib.deflateRawSync(file.data, { level: 9 });
+    // Store files without compression. This avoids zlib-version-dependent output
+    // and makes the generated XPI bit-for-bit reproducible across environments.
+    const compressed = file.data;
     const crc = crc32(file.data);
     const localHeader = Buffer.concat([
-      u32(0x04034b50), u16(20), u16(0), u16(8), u16(dosTime), u16(dosDate),
+      u32(0x04034b50), u16(20), u16(0), u16(0), u16(dosTime), u16(dosDate),
       u32(crc), u32(compressed.length), u32(file.data.length), u16(name.length), u16(0), name,
     ]);
     localParts.push(localHeader, compressed);
 
     const centralHeader = Buffer.concat([
-      u32(0x02014b50), u16(20), u16(20), u16(0), u16(8), u16(dosTime), u16(dosDate),
+      u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(dosTime), u16(dosDate),
       u32(crc), u32(compressed.length), u32(file.data.length), u16(name.length), u16(0), u16(0),
       u16(0), u16(0), u32(0), u32(offset), name,
     ]);

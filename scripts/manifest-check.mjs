@@ -14,6 +14,12 @@ if (!manifest.background || !Array.isArray(manifest.background.scripts) || !mani
 if (manifest.background.service_worker) fail('Firefox build must not depend on background.service_worker');
 if (!manifest.sidebar_action || !manifest.sidebar_action.default_panel) fail('sidebar_action.default_panel is required');
 if (!manifest.action) fail('action is required');
+const gecko = manifest.browser_specific_settings && manifest.browser_specific_settings.gecko;
+if (!gecko || typeof gecko.id !== 'string' || !gecko.id.trim()) fail('Firefox MV3 add-on id is required');
+const minFirefox = Number.parseInt(gecko.strict_min_version, 10);
+if (!Number.isFinite(minFirefox) || minFirefox < 142) fail('strict_min_version must be Firefox 142 or newer for data_collection_permissions compatibility');
+const dataPermissions = gecko.data_collection_permissions && gecko.data_collection_permissions.required;
+if (!Array.isArray(dataPermissions) || dataPermissions.length !== 1 || dataPermissions[0] !== 'none') fail('local-first build must explicitly declare no data collection');
 if (!Array.isArray(manifest.content_scripts) || !manifest.content_scripts.length) fail('content_scripts are required');
 if (!Array.isArray(manifest.host_permissions) || !manifest.host_permissions.includes('https://*/*')) fail('HTTPS host permission is required for page inspection');
 const csp = manifest.content_security_policy && manifest.content_security_policy.extension_pages;

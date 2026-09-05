@@ -20,7 +20,13 @@ All notable changes to this project are documented here.
 - Local-first privacy model with no telemetry, analytics, backend, or remote runtime code.
 - Dependency-free static checks, privacy checks, unit tests, deterministic XPI build, package verification, pinned Mozilla `web-ext` validation in CI, and GitHub Actions CI.
 
+### Changed
+
+- Minimum Firefox version is 142.0 so the declared data-collection manifest key is supported without Mozilla validator compatibility warnings.
+
 ### Fixed
 
 - Added the Firefox Manifest V3 add-on ID required by Mozilla validation.
 - Added an explicit Firefox `data_collection_permissions` declaration of `none`, matching the local-only privacy model.
+- Made XPI generation cross-environment deterministic by using ZIP STORE entries instead of zlib-dependent deflate output.
+- CI now updates generated `dist/` artifacts automatically on non-main branch pushes after all validation steps pass.
