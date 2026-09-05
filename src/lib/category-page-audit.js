@@ -149,8 +149,20 @@
     };
   }
 
-  function hasNoindex(facts) {
-    return (Array.isArray(facts && facts.robots) ? facts.robots : []).some((item) => /(?:^|[,\s])noindex(?:$|[,\s])/i.test(String(item && item.content || '')));
+  function robotsState(facts, responseMeta) {
+    const metaRows = (Array.isArray(facts && facts.robots) ? facts.robots : [])
+      .map((item) => clean(item && item.content))
+      .filter(Boolean);
+    const headerRows = (Array.isArray(responseMeta && responseMeta.xRobotsTag) ? responseMeta.xRobotsTag : [])
+      .map((item) => clean(item))
+      .filter(Boolean);
+    const combined = metaRows.concat(headerRows);
+    return {
+      meta: metaRows,
+      header: headerRows,
+      noindex: combined.some((value) => /(?:^|[,\s])noindex(?:$|[,\s])/i.test(value)),
+      index: combined.some((value) => /(?:^|[,\s])index(?:$|[,\s])/i.test(value)),
+    };
   }
 
   function issue(list, id, severity, title, message, refs) {
@@ -174,6 +186,7 @@
     const links = Array.isArray(facts && facts.links) ? facts.links : [];
     const current = safeUrl(facts && facts.url);
     const output = [];
+    const seen = new Set();
     for (const link of links) {
       if (!link || !link.internal || link.kind !== 'http') continue;
       const page = paginationParam(link.href);
@@ -181,13 +194,14 @@
       const looksLikePaginationLabel = /^(?:next|prev|previous|older|newer|\d+|[‹›«»←→])$/.test(label);
       if (!page && !looksLikePaginationLabel) continue;
       const target = safeUrl(link.href);
-      if (!target || (current && target.origin !== current.origin)) continue;
+      if (!target || (current && target.origin !== current.origin) || seen.has(target.href)) continue;
+      seen.add(target.href);
       output.push({ href: target.href, label: link.label || '', page: page ? page.number : null, ref: link.ref || null });
     }
     return output.slice(0, 250);
   }
 
-  function inspect(facts, pageType) {
+  function inspect(facts, pageType, responseMeta) {
     const source = facts || {};
     const signals = source.pageSignals || {};
     const listing = itemListData(source);
@@ -224,7 +238,8 @@
     const itemCount = Math.max(listing.urls.length, listing.productMicrodataCount);
     const faceted = Boolean(pageType && pageType.traits && pageType.traits.faceted) || filterParams.length > 0 || sortParams.length > 0;
     const pagination = Boolean(Boolean(pageType && pageType.traits && pageType.traits.pagination) || pageNumber > 1 || relNext || relPrev || pagerLinks.length > 0);
-    const noindex = hasNoindex(source);
+    const robots = robotsState(source, responseMeta || null);
+    const parameterized = filterParams.length > 0 || sortParams.length > 0 || trackingParams.length > 0 || sessionParams.length > 0;
 
     if (!canonical) {
       issue(issues, 'category.canonical.missing', 'warning', 'Category canonical missing', 'The category/listing page does not expose a canonical URL.');
@@ -242,12 +257,15 @@
       issue(issues, 'category.items.thin', 'warning', 'Thin category/listing', `Only ${itemCount} listing item${itemCount === 1 ? '' : 's'} and ${wordCount} visible words were detected.`);
     }
 
-    if (faceted && canonicalSelf && !noindex) {
+    if (faceted && canonicalSelf && !robots.noindex) {
       const names = filterParams.concat(sortParams).map((item) => item.name);
       issue(issues, 'category.facets.index_bloat', 'warning', 'Faceted URL may be indexable', `This parameterized listing is self-canonical and not noindex${names.length ? ` (${Array.from(new Set(names)).join(', ')})` : ''}. Review whether it should create a separate indexable URL.`);
     }
-    if ((trackingParams.length || sessionParams.length) && canonicalSelf) {
-      issue(issues, 'category.params.noncontent_canonical', 'warning', 'Tracking/session parameters are self-canonical', 'A URL containing tracking or session-like parameters canonicalizes to itself, which can create duplicate crawl/index paths.');
+    if ((trackingParams.length || sessionParams.length) && canonicalSelf && !robots.noindex) {
+      issue(issues, 'category.params.noncontent_canonical', 'warning', 'Tracking/session parameters are self-canonical', 'A tracking/session-like URL is self-canonical and indexable, which can create duplicate crawl/index paths.');
+    }
+    if (parameterized && robots.noindex && robots.index) {
+      issue(issues, 'category.params.robots_conflict', 'warning', 'Parameterized URL has conflicting robots directives', 'The parameterized listing exposes both index and noindex directives across meta robots and/or X-Robots-Tag.');
     }
     if (parameterizedLinks.length >= 10) {
       issue(issues, 'category.facets.internal_links', 'warning', 'Many parameterized internal links', `${parameterizedLinks.length} internal links contain filter, sort, tracking, or session-like parameters.`, parameterizedLinks.map((item) => item.ref).filter(Boolean));
@@ -297,6 +315,7 @@
       },
       facets: {
         detected: faceted,
+        parameterized,
         currentParams: params,
         filterParams,
         sortParams,
@@ -313,7 +332,13 @@
         internalLinkCount: pagerLinks.length,
         links: pagerLinks,
       },
-      indexability: { noindex },
+      indexability: {
+        noindex: robots.noindex,
+        index: robots.index,
+        metaRobots: robots.meta,
+        xRobotsTag: robots.header,
+        parameterized,
+      },
     };
   }
 
@@ -324,5 +349,6 @@
     paginationParam,
     stripPagination,
     stripNonContentParams,
+    robotsState,
   };
 });
