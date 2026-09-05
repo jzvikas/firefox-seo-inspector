@@ -25,6 +25,7 @@
 
   <nav class="tabs" aria-label="Inspector sections">
     <button class="tab active" data-tab="overview" type="button">Overview</button>
+    <button class="tab" data-tab="indexability" type="button">Indexability</button>
     <button class="tab" data-tab="issues" type="button">Issues</button>
     <button class="tab" data-tab="headings" type="button">Headings</button>
     <button class="tab" data-tab="links" type="button">Links</button>
@@ -36,6 +37,7 @@
 
   <main>
     <section id="overview" class="panel active"></section>
+    <section id="indexability" class="panel"></section>
     <section id="issues" class="panel"></section>
     <section id="headings" class="panel"></section>
     <section id="links" class="panel"></section>
@@ -51,8 +53,10 @@
   </footer>
 
   <script src="../lib/seo-core.js"></script>
+  <script src="../lib/indexability.js"></script>
   <script src="sidebar-base.js"></script>
   <script src="sidebar-render.js"></script>
+  <script src="sidebar-indexability.js"></script>
   <script src="sidebar-main.js"></script>
 </body>
 </html>
