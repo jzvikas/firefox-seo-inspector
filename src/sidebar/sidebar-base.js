@@ -9,6 +9,10 @@ const state = {
   rawDiff: null,
   indexabilityRawDiff: undefined,
   canonicalChecks: new Map(),
+  robotsReport: null,
+  sitemapReport: null,
+  sitemapChecking: false,
+  sitemapOperationId: null,
   issueFilter: 'all',
 };
 
@@ -71,6 +75,10 @@ async function refresh() {
   state.rawDiff = null;
   state.indexabilityRawDiff = undefined;
   state.linkResults = new Map();
+  state.robotsReport = null;
+  state.sitemapReport = null;
+  state.sitemapChecking = false;
+  state.sitemapOperationId = null;
   pageUrl.textContent = tab && tab.url ? tab.url : '';
   pageUrl.title = tab && tab.url ? tab.url : '';
 
@@ -84,6 +92,20 @@ async function refresh() {
   try {
     const report = await sendToTab({ type: 'seoInspector.analyze' });
     state.report = report;
+    const robotsReport = await browser.runtime.sendMessage({
+      type: 'seoInspector.getRobots',
+      url: report.facts.url,
+      userAgent: 'Googlebot',
+    }).catch(() => null);
+    if (robotsReport) {
+      state.robotsReport = robotsReport;
+      report.robotsTxt = robotsReport;
+      report.evaluation.indexability = Indexability.analyze(
+        report.facts,
+        report.responseMeta || null,
+        { robotsTxt: robotsReport },
+      );
+    }
     await sendToTab({ type: 'seoInspector.watch', enabled: true }).catch(() => {});
     renderAll();
   } catch (_error) {
@@ -97,9 +119,15 @@ function renderHeader() {
   if (!state.report) return;
   const evaluation = state.report.evaluation;
   const score = evaluation.score;
+  const indexability = evaluation.indexability;
   scoreNode.textContent = score;
   scoreNode.className = `score ${score >= 90 ? 'good' : score >= 70 ? 'warn' : 'bad'}`;
-  statusTitle.textContent = score >= 90 ? 'Looks healthy' : score >= 70 ? 'Needs review' : 'Important issues found';
+  if (indexability && !indexability.indexable) {
+    scoreNode.className = `score ${indexability.verdict === Indexability.VERDICTS.CANONICALIZED || indexability.verdict === Indexability.VERDICTS.REDIRECTED ? 'warn' : 'bad'}`;
+    statusTitle.textContent = `Indexability: ${indexability.verdict}`;
+  } else {
+    statusTitle.textContent = score >= 90 ? 'Looks healthy' : score >= 70 ? 'Needs review' : 'Important issues found';
+  }
   statusCounts.textContent = `${evaluation.severityCounts.critical} critical · ${evaluation.severityCounts.warning} warnings`;
   pageUrl.textContent = state.report.facts.url || '';
   pageUrl.title = state.report.facts.url || '';
@@ -130,6 +158,7 @@ function renderOverview() {
   ]));
   panel.appendChild(card('Page', [
     ['Indexability', indexability.verdict],
+    ['robots.txt', state.robotsReport ? (state.robotsReport.blocked ? `Blocked (${state.robotsReport.rule || 'matching rule'})` : state.robotsReport.allowed === true ? 'Allowed' : 'Unknown') : 'Not checked'],
     ['HTTP', r.statusCode ? `${r.statusCode} ${r.statusLine || ''}`.trim() : 'Not captured'],
     ['Redirect hops', (r.redirectChain || []).length],
     ['H1', h1.length ? `${h1.length}: ${h1.map((item) => item.text).join(' | ')}` : '0'],
