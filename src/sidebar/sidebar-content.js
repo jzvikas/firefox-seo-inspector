@@ -3,6 +3,8 @@
 const rawSourceUiState = {
   loading: false,
   operationId: '',
+  tabId: null,
+  pageUrl: '',
   error: '',
 };
 
@@ -27,16 +29,27 @@ function rawSourceRenderConsumers() {
   try { renderCompare(); } catch (_error) {}
 }
 
+function rawSourceStillCurrent(operationId, tabId, pageUrl) {
+  const currentUrl = state.report && state.report.facts ? String(state.report.facts.url || '') : '';
+  return rawSourceUiState.operationId === operationId
+    && state.tabId === tabId
+    && currentUrl === pageUrl;
+}
+
 async function runRawSourceFetch() {
-  if (rawSourceUiState.loading || !state.report) return null;
+  if (rawSourceUiState.loading || !state.report || typeof state.tabId !== 'number') return null;
   const operationId = rawSourceOperationId();
+  const sourceTabId = state.tabId;
+  const sourceUrl = state.report && state.report.facts ? String(state.report.facts.url || '') : '';
   rawSourceUiState.loading = true;
   rawSourceUiState.operationId = operationId;
+  rawSourceUiState.tabId = sourceTabId;
+  rawSourceUiState.pageUrl = sourceUrl;
   rawSourceUiState.error = '';
   rawSourceRenderConsumers();
   try {
-    const result = await sendToTab({ type: 'seoInspector.fetchRaw', operationId });
-    if (rawSourceUiState.operationId !== operationId) return null;
+    const result = await browser.tabs.sendMessage(sourceTabId, { type: 'seoInspector.fetchRaw', operationId });
+    if (!rawSourceStillCurrent(operationId, sourceTabId, sourceUrl)) return null;
     const error = rawSourceErrorMessage(result);
     if (error) {
       state.rawReport = null;
@@ -54,7 +67,7 @@ async function runRawSourceFetch() {
     state.rawDiff = SeoCore.diffPageFacts(state.report.facts, result.facts);
     return result;
   } catch (_error) {
-    if (rawSourceUiState.operationId === operationId) {
+    if (rawSourceStillCurrent(operationId, sourceTabId, sourceUrl)) {
       state.rawReport = null;
       state.rawDiff = null;
       rawSourceUiState.error = 'Raw HTML fetch failed because the inspected tab became unavailable.';
@@ -64,6 +77,8 @@ async function runRawSourceFetch() {
     if (rawSourceUiState.operationId === operationId) {
       rawSourceUiState.loading = false;
       rawSourceUiState.operationId = '';
+      rawSourceUiState.tabId = null;
+      rawSourceUiState.pageUrl = '';
       rawSourceRenderConsumers();
     }
   }
@@ -71,13 +86,16 @@ async function runRawSourceFetch() {
 
 async function cancelRawSourceFetch() {
   const operationId = rawSourceUiState.operationId;
-  if (!rawSourceUiState.loading || !operationId) return;
+  const tabId = rawSourceUiState.tabId;
+  if (!rawSourceUiState.loading || !operationId || typeof tabId !== 'number') return;
   try {
-    await sendToTab({ type: 'seoInspector.cancelRaw', operationId });
+    await browser.tabs.sendMessage(tabId, { type: 'seoInspector.cancelRaw', operationId });
   } catch (_error) {
     rawSourceUiState.error = 'Raw HTML cancellation could not reach the inspected tab.';
     rawSourceUiState.loading = false;
     rawSourceUiState.operationId = '';
+    rawSourceUiState.tabId = null;
+    rawSourceUiState.pageUrl = '';
     rawSourceRenderConsumers();
   }
 }
