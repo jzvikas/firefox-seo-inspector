@@ -11,13 +11,23 @@ function source(relative) {
   return fs.readFileSync(path.join(__dirname, '..', relative), 'utf8');
 }
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolveValue, rejectValue) => {
+    resolve = resolveValue;
+    reject = rejectValue;
+  });
+  return { promise, resolve, reject };
+}
+
 function recoveryHarness(options) {
   const opts = options || {};
   const statuses = [];
-  const sentToTab = [];
+  const tabMessages = [];
   let renderCalls = 0;
   let ensureCalls = 0;
-  const report = opts.report || {
+  const defaultReport = opts.report || {
     facts: { url: 'https://example.test/', robots: [] },
     responseMeta: null,
     evaluation: { indexability: { verdict: 'Indexable' } },
@@ -39,8 +49,9 @@ function recoveryHarness(options) {
     Number,
     Promise,
     ContentConnection: Object.assign({}, ContentConnection, {
-      async ensure() {
+      async ensure(_browser, tabId, manifest) {
         ensureCalls += 1;
+        if (typeof opts.ensure === 'function') return opts.ensure(tabId, manifest, ensureCalls);
         if (opts.ensureError) throw opts.ensureError;
         return opts.connection || { ok: true, recovered: false, injected: false };
       },
@@ -49,19 +60,29 @@ function recoveryHarness(options) {
     pageUrl: { textContent: '', title: '' },
     setStatus(title, detail) { statuses.push({ title, detail }); },
     renderAll() { renderCalls += 1; },
-    activeTab: async () => opts.tab === undefined ? { id: 8, url: 'https://example.test/' } : opts.tab,
-    sendToTab: async (message) => {
-      sentToTab.push(message);
-      if (message.type === 'seoInspector.analyze') {
-        if (opts.analyzeError) throw opts.analyzeError;
-        return report;
-      }
-      return { ok: true };
+    activeTab: async () => {
+      if (typeof opts.activeTab === 'function') return opts.activeTab();
+      return opts.tab === undefined ? { id: 8, url: 'https://example.test/' } : opts.tab;
     },
     browser: {
+      tabs: {
+        async sendMessage(tabId, message) {
+          tabMessages.push({ tabId, message });
+          if (typeof opts.tabSendMessage === 'function') return opts.tabSendMessage(tabId, message);
+          if (message.type === 'seoInspector.analyze') {
+            if (opts.analyzeError) throw opts.analyzeError;
+            if (typeof opts.reportForTab === 'function') return opts.reportForTab(tabId);
+            return defaultReport;
+          }
+          return { ok: true };
+        },
+      },
       runtime: {
         getManifest() { return { content_scripts: [{ js: ['content/content.js'] }] }; },
-        async sendMessage() { return opts.robotsReport || null; },
+        async sendMessage(message) {
+          if (typeof opts.runtimeSendMessage === 'function') return opts.runtimeSendMessage(message);
+          return opts.robotsReport || null;
+        },
       },
     },
     Indexability: { analyze() { return { verdict: 'Indexable' }; } },
@@ -72,7 +93,7 @@ function recoveryHarness(options) {
     context,
     state,
     statuses,
-    sentToTab,
+    tabMessages,
     get renderCalls() { return renderCalls; },
     get ensureCalls() { return ensureCalls; },
   };
@@ -85,7 +106,10 @@ test('runtime recovery reconnects an HTTP tab and completes the audit without re
   assert.equal(h.state.report.facts.url, 'https://example.test/');
   assert.equal(h.renderCalls, 1);
   assert.ok(h.statuses.some((item) => item.title === 'Reconnected to page'));
-  assert.deepEqual(h.sentToTab.map((item) => item.type), ['seoInspector.analyze', 'seoInspector.watch']);
+  assert.deepEqual(h.tabMessages.map((item) => [item.tabId, item.message.type]), [
+    [8, 'seoInspector.analyze'],
+    [8, 'seoInspector.watch'],
+  ]);
 });
 
 test('runtime recovery explains unsupported Firefox pages without attempting injection', async () => {
@@ -95,6 +119,7 @@ test('runtime recovery explains unsupported Firefox pages without attempting inj
   assert.equal(h.state.report, null);
   assert.equal(h.statuses.at(-1).title, 'Firefox page cannot be inspected');
   assert.match(h.statuses.at(-1).detail, /HTTP or HTTPS/);
+  assert.equal(h.tabMessages.length, 0);
 });
 
 test('runtime recovery reports protected/restricted page access when injection is blocked', async () => {
@@ -107,6 +132,7 @@ test('runtime recovery reports protected/restricted page access when injection i
   assert.equal(h.state.report, null);
   assert.equal(h.statuses.at(-1).title, 'Page access unavailable');
   assert.match(h.statuses.at(-1).detail, /did not allow/);
+  assert.equal(h.tabMessages.length, 0);
 });
 
 test('runtime recovery distinguishes an audit exception from a missing content script', async () => {
@@ -120,6 +146,58 @@ test('runtime recovery distinguishes an audit exception from a missing content s
   assert.equal(h.statuses.at(-1).title, 'Audit failed');
   assert.match(h.statuses.at(-1).detail, /runtime error/);
   assert.equal(h.state.lastRuntimeError.name, 'Error');
+  assert.deepEqual(h.tabMessages.map((item) => item.message.type), ['seoInspector.analyze']);
+});
+
+test('older refresh cannot overwrite a newer target tab after an async reconnect delay', async () => {
+  const firstEnsureStarted = deferred();
+  const releaseFirstEnsure = deferred();
+  const tabs = [
+    { id: 1, url: 'https://one.example/' },
+    { id: 2, url: 'https://two.example/' },
+  ];
+  let activeCalls = 0;
+  const h = recoveryHarness({
+    activeTab() {
+      const tab = tabs[Math.min(activeCalls, tabs.length - 1)];
+      activeCalls += 1;
+      return tab;
+    },
+    async ensure(tabId) {
+      if (tabId === 1) {
+        firstEnsureStarted.resolve();
+        await releaseFirstEnsure.promise;
+      }
+      return { ok: true, recovered: false, injected: false };
+    },
+    reportForTab(tabId) {
+      return {
+        facts: { url: tabId === 1 ? 'https://one.example/' : 'https://two.example/', robots: [] },
+        responseMeta: null,
+        evaluation: { indexability: { verdict: 'Indexable' } },
+      };
+    },
+  });
+
+  const older = vm.runInContext('refresh()', h.context);
+  await firstEnsureStarted.promise;
+  const newer = vm.runInContext('refresh()', h.context);
+  await newer;
+
+  assert.equal(h.state.tabId, 2);
+  assert.equal(h.state.report.facts.url, 'https://two.example/');
+  assert.deepEqual(h.tabMessages.map((item) => [item.tabId, item.message.type]), [
+    [2, 'seoInspector.analyze'],
+    [2, 'seoInspector.watch'],
+  ]);
+
+  releaseFirstEnsure.resolve();
+  await older;
+
+  assert.equal(h.state.tabId, 2);
+  assert.equal(h.state.report.facts.url, 'https://two.example/');
+  assert.equal(h.renderCalls, 1);
+  assert.deepEqual(h.tabMessages.map((item) => item.tabId), [2, 2]);
 });
 
 test('content bootstrap is guarded against duplicate injection and exposes a ping listener', () => {
