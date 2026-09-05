@@ -42,7 +42,7 @@ async function analyzeDocument(doc, locationLike, responseMeta, securityResponse
   const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
   const pageType = detectPageType(doc, facts, responseMeta);
   const productAudit = ProductPageAudit.inspect(facts, pageType);
-  const categoryAudit = CategoryPageAudit.inspect(facts, pageType);
+  const categoryAudit = CategoryPageAudit.inspect(facts, pageType, responseMeta || null);
   const policy = auditPolicy || await loadAuditPolicy(facts.url);
   const rulesConfig = CustomRules.normalize(policy.rules);
   const evaluation = evaluateWithAuditPolicy(facts, responseMeta || null, policy);
@@ -156,7 +156,7 @@ async function fetchRawReport() {
   const facts = PageExtractor.extract(rawDocument, rawUrl, { performance: null });
   const pageType = detectPageType(rawDocument, facts, responseMeta);
   const productAudit = ProductPageAudit.inspect(facts, pageType);
-  const categoryAudit = CategoryPageAudit.inspect(facts, pageType);
+  const categoryAudit = CategoryPageAudit.inspect(facts, pageType, responseMeta);
   const auditPolicy = await loadAuditPolicy(rawUrl.href);
   const evaluation = evaluateWithAuditPolicy(facts, responseMeta, auditPolicy);
   const contentAudit = ContentAudit.collect(rawDocument, {
