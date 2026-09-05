@@ -1,0 +1,97 @@
+.rules-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(105px, 0.6fr);
+  gap: 8px 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.2));
+}
+
+.rules-field:last-child {
+  border-bottom: 0;
+}
+
+.rules-label {
+  display: contents;
+}
+
+.rules-label > input[type="number"],
+.rules-label > select {
+  grid-column: 2;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rules-label > input[type="checkbox"] {
+  justify-self: end;
+  grid-column: 2;
+}
+
+.rules-label::before {
+  content: attr(data-label);
+}
+
+.rules-help {
+  grid-column: 1 / -1;
+  line-height: 1.35;
+}
+
+.rules-check-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.2));
+}
+
+.rules-check-row:last-child {
+  border-bottom: 0;
+}
+
+.rules-check-label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.rules-check-label input {
+  margin-top: 3px;
+  flex: 0 0 auto;
+}
+
+.rules-check-label span {
+  min-width: 0;
+}
+
+.rules-check-id {
+  display: block;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.rules-check-row select,
+.rules-field input[type="number"] {
+  min-height: 30px;
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.35));
+  border-radius: 6px;
+  background: Canvas;
+  color: CanvasText;
+  padding: 4px 6px;
+}
+
+@media (max-width: 360px) {
+  .rules-field,
+  .rules-check-row {
+    grid-template-columns: 1fr;
+  }
+
+  .rules-check-row select,
+  .rules-label > input[type="number"],
+  .rules-label > input[type="checkbox"] {
+    grid-column: 1;
+    justify-self: stretch;
+  }
+}
