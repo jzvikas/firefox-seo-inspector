@@ -14,6 +14,10 @@ All notable changes to this project are documented here.
 - Local web-performance hint engine with a likely initial-viewport LCP candidate, CLS/layout-shift risk hints, missing image dimensions, above-fold lazy-loading warnings, and large below-fold eager-loading warnings.
 - Inspection of preload/modulepreload, preconnect, prefetch, DNS-prefetch, render-blocking stylesheet/script candidates, observed font resources, and font preload/crossorigin relationships without additional network requests.
 - Automated tests for viewport classification, reserved dimensions, image loading hints, LCP candidate selection, resource hints, render-blocking rules, font preload matching, and deterministic issue summaries.
+- JavaScript asset inventory with inline/external split, async/defer/module/nomodule flags, first-party/third-party attribution, Resource Timing size/duration matching, exact duplicate URL detection, and third-party script grouping by host.
+- CSS asset inventory with external stylesheet and inline-style counts, media/disabled state, first-party/third-party attribution, Resource Timing size/duration matching, and duplicate stylesheet detection.
+- Known-size warnings for JavaScript resources at least 250 KiB and CSS resources at least 100 KiB, without fetching assets again or guessing unknown cross-origin/cache sizes.
+- Automated tests for asset URL normalization, loading flags, inline-source privacy, timing matching, duplicate detection, third-party grouping, size thresholds, and 1,000-item safety caps.
 
 ## [0.2.0] - 2026-09-05
 
@@ -60,8 +64,8 @@ All notable changes to this project are documented here.
 - JSON-LD parsing, schema type discovery, invalid structured-data detection, and basic Product schema checks.
 - Hreflang, Open Graph, and Twitter/X card inspection.
 - Rendered DOM versus raw HTML comparison.
-- Per-URL local snapshot save/compare workflow.
-- JSON export and issue-list clipboard export.
+- Per-URL local snapshots and regression diffs.
+- JSON report export and copyable issue list.
 - Local-first privacy model with no telemetry, analytics, backend, or remote runtime code.
 - Dependency-free static checks, privacy checks, unit tests, deterministic XPI build, package verification, pinned Mozilla `web-ext` validation in CI, and GitHub Actions CI.
 
