@@ -12,27 +12,32 @@ function pageContext() {
   };
 }
 
-async function loadCustomRulesConfig() {
+async function loadAuditPolicy(url) {
   try {
-    const stored = await browser.storage.local.get(CustomRules.STORAGE_KEY);
-    return CustomRules.normalize(stored && stored[CustomRules.STORAGE_KEY]);
+    const stored = await browser.storage.local.get([CustomRules.STORAGE_KEY, DomainProfiles.STORAGE_KEY]);
+    const baseRules = CustomRules.normalize(stored && stored[CustomRules.STORAGE_KEY]);
+    const profiles = DomainProfiles.normalizeStore(stored && stored[DomainProfiles.STORAGE_KEY]);
+    return DomainProfiles.resolve(profiles, url, baseRules);
   } catch (_error) {
-    return CustomRules.normalize(null);
+    return DomainProfiles.resolve(null, url, CustomRules.normalize(null));
   }
 }
 
-function evaluateWithCustomRules(facts, responseMeta, rulesConfig) {
-  const config = CustomRules.normalize(rulesConfig);
-  const base = SeoCore.evaluateFacts(facts, responseMeta || null, CustomRules.toSeoCoreOptions(config));
-  const evaluation = CustomRules.applyEvaluation(base, facts, config);
+function evaluateWithAuditPolicy(facts, responseMeta, policy) {
+  const resolved = policy || DomainProfiles.resolve(null, facts && facts.url, CustomRules.normalize(null));
+  const rulesConfig = CustomRules.normalize(resolved.rules);
+  const base = SeoCore.evaluateFacts(facts, responseMeta || null, CustomRules.toSeoCoreOptions(rulesConfig));
+  let evaluation = CustomRules.applyEvaluation(base, facts, rulesConfig);
+  if (resolved.profile) evaluation = DomainProfiles.applyEvaluation(evaluation, facts, resolved.profile, rulesConfig);
   evaluation.indexability = Indexability.analyze(facts, responseMeta || null);
   return evaluation;
 }
 
-async function analyzeDocument(doc, locationLike, responseMeta, securityResponseMeta, customRulesConfig) {
+async function analyzeDocument(doc, locationLike, responseMeta, securityResponseMeta, auditPolicy) {
   const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
-  const rulesConfig = CustomRules.normalize(customRulesConfig);
-  const evaluation = evaluateWithCustomRules(facts, responseMeta || null, rulesConfig);
+  const policy = auditPolicy || await loadAuditPolicy(facts.url);
+  const rulesConfig = CustomRules.normalize(policy.rules);
+  const evaluation = evaluateWithAuditPolicy(facts, responseMeta || null, policy);
   const pageUrl = locationLike && locationLike.href ? locationLike.href : '';
   const performance = PerformanceAudit.collect(doc, window.performance, pageUrl);
   const context = pageContext();
@@ -61,6 +66,7 @@ async function analyzeDocument(doc, locationLike, responseMeta, securityResponse
     responseMeta: responseMeta || null,
     securityResponseMeta: securityResponseMeta || null,
     customRules: rulesConfig,
+    domainProfile: policy.profile ? DomainProfiles.profileSummary(policy.profile) : null,
     pageContext: context,
     performance,
     performanceHints,
@@ -72,12 +78,12 @@ async function analyzeDocument(doc, locationLike, responseMeta, securityResponse
 }
 
 async function analyzeCurrentPage() {
-  const [responseMeta, securityResponseMeta, rulesConfig] = await Promise.all([
+  const [responseMeta, securityResponseMeta, auditPolicy] = await Promise.all([
     browser.runtime.sendMessage({ type: 'seoInspector.getResponseMeta' }).catch(() => null),
     browser.runtime.sendMessage({ type: 'seoInspector.getSecurityResponseMeta' }).catch(() => null),
-    loadCustomRulesConfig(),
+    loadAuditPolicy(window.location.href),
   ]);
-  return analyzeDocument(document, window.location, responseMeta, securityResponseMeta, rulesConfig);
+  return analyzeDocument(document, window.location, responseMeta, securityResponseMeta, auditPolicy);
 }
 
 function clearHighlights() {
@@ -115,15 +121,12 @@ function highlightRefs(refs) {
 }
 
 async function fetchRawReport() {
-  const [response, rulesConfig] = await Promise.all([
-    fetch(window.location.href, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-      redirect: 'follow',
-    }),
-    loadCustomRulesConfig(),
-  ]);
+  const response = await fetch(window.location.href, {
+    method: 'GET',
+    credentials: 'include',
+    cache: 'no-store',
+    redirect: 'follow',
+  });
   const html = await response.text();
   const parser = new DOMParser();
   const rawDocument = parser.parseFromString(html, 'text/html');
@@ -140,13 +143,22 @@ async function fetchRawReport() {
     redirectChain: [],
   };
   const facts = PageExtractor.extract(rawDocument, rawUrl, { performance: null });
-  const evaluation = evaluateWithCustomRules(facts, responseMeta, rulesConfig);
+  const auditPolicy = await loadAuditPolicy(rawUrl.href);
+  const evaluation = evaluateWithAuditPolicy(facts, responseMeta, auditPolicy);
   const contentAudit = ContentAudit.collect(rawDocument, {
     facts,
     responseMeta,
     detectVisibility: false,
   });
-  return { facts, evaluation, responseMeta, customRules: rulesConfig, pageContext: pageContext(), contentAudit };
+  return {
+    facts,
+    evaluation,
+    responseMeta,
+    customRules: CustomRules.normalize(auditPolicy.rules),
+    domainProfile: auditPolicy.profile ? DomainProfiles.profileSummary(auditPolicy.profile) : null,
+    pageContext: pageContext(),
+    contentAudit,
+  };
 }
 
 function notifyPageChanged() {

@@ -20,6 +20,7 @@ function renderAll() {
   renderSocial();
   renderCompare();
   renderRules();
+  renderProfiles();
 }
 
 function activateTab(name) {

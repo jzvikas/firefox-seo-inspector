@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Dedicated local-only Profiles panel with exact-hostname matching, optional labels, enable/disable state, create/save/delete actions, and a bounded saved-profile inventory.
+- Domain profiles inherit global Rules by default and can override title/description thresholds, oversized-image ratio, known image byte-size limit, and required title/description/canonical/H1/schema/hreflang/HTTPS signals.
+- Per-host expected JSON-LD schema types and hreflang values with `profile.schema.expected` and `profile.hreflang.expected` findings when expectations are missing.
+- Per-host ignored check IDs that are additive with global disabled checks, including the ability to ignore profile expectation findings without disabling them globally.
+- Rendered audits, authenticated same-page raw HTML, open-tab comparisons, and explicit URL A/B comparisons resolve hostname profiles independently; URL A and URL B can use different profiles based on their final fetched hostname.
+- Domain-profile storage/model safety caps, normalization/validation, exact-host tests, sidebar dependency checks, public-safe source checks, and a VM runtime test for per-host URL comparison policy.
 - Local-only Rules panel with versioned audit configuration stored in Firefox `browser.storage.local`, including Save and Reset defaults actions.
 - Configurable title/meta-description thresholds, oversized-image ratio, and a real-byte image file-size threshold that is evaluated only when byte size is known.
 - Required-signal policy for title, meta description, canonical, H1, typed structured data, hreflang, and HTTPS.
