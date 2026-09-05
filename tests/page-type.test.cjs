@@ -87,6 +87,16 @@ test('search path and query parameters identify search result pages', () => {
   assert.equal(queryResult.confidence, 'medium');
 });
 
+test('explicit search URL remains Search when result cards contain Product entities', () => {
+  const result = PageType.detect(facts({
+    url: 'https://example.test/catalog?q=boots',
+    schemas: [schema('Product'), schema('Product')],
+  }), { statusCode: 200 });
+  assert.equal(result.primary, PageType.TYPES.SEARCH);
+  assert.equal(result.confidence, 'medium');
+  assert.ok(result.candidateScores.product > result.candidateScores.search);
+});
+
 test('SearchResultsPage schema beats Product blocks commonly present in results', () => {
   const result = PageType.detect(facts({
     schemas: [schema('SearchResultsPage'), schema('Product')],
