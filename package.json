@@ -1,6 +1,6 @@
 {
   "name": "firefox-seo-inspector",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Source, tests, and deterministic build tooling for Firefox SEO Inspector.",
   "scripts": {
