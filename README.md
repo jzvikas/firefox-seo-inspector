@@ -105,9 +105,19 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Heading-quality summary with H1–H6 counts, missing/multiple H1, empty headings, and skipped levels.
 - Hidden-content signals are not labeled as spam and do not attempt to infer intent.
 
+### Security inspection
+
+- Dedicated Security tab with current transport protocol, HTTPS status, active/passive mixed-content counts, and severity-ranked findings.
+- Read-only main-document capture of enforced/report-only CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy, and X-Content-Type-Options using the existing `webRequest` permission.
+- CSP checks distinguish report-only policy, `frame-ancestors`, broad script tokens, and X-Frame-Options fallback behavior.
+- HSTS parsing reports `max-age`, `includeSubDomains`, and `preload`; HSTS is not falsely required on HTTP pages.
+- Mixed-content inspection combines current DOM references with existing local Resource Timing and separates active/blockable resources from passive media.
+- Third-party script inventory reuses the already-collected asset audit and performs no additional requests or page-code execution.
+- Cookie inspection is intentionally not enabled yet because it would require expanding permissions; the current Security feature adds no new permission.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestones focus on security inspection and link-audit intelligence before moving into regression and multi-page workflows.
+See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestone focuses on link-audit intelligence before moving into regression and multi-page workflows.
 
 ## Install for development
 
@@ -123,13 +133,15 @@ A prebuilt unsigned package is also kept in `dist/`. Stable Firefox generally re
 
 ## Permissions and network behavior
 
-The extension requests access to HTTP and HTTPS pages because its job is to inspect the active page and, only when required by a feature, check related URLs. The `webRequest` permission is used read-only to capture SEO-relevant response metadata and redirect hops.
+The extension requests access to HTTP and HTTPS pages because its job is to inspect the active page and, only when required by a feature, check related URLs. The `webRequest` permission is used read-only to capture SEO-relevant response metadata, redirect hops, and selected main-document security response headers.
 
 External link, image, canonical, hreflang, and sitemap checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. `robots.txt` discovery is a single size/time-bounded request and is cached briefly.
 
 The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints, asset inspection, and third-party grouping. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. Third-party service categories are local heuristics rather than network lookups. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
 
 The Content panel performs a bounded local DOM scan and does not make network requests during normal inspection. Hidden-content output is limited to technical visibility signals and bounded element labels; it does not infer spam or intent.
+
+The Security panel reads current-page DOM/resource references plus selected security headers already observed on the main document. It does not fetch external security databases or issue extra security-audit requests. Cookie Secure/HttpOnly/SameSite inspection is not enabled, so the extension does not request cookie access for this feature.
 
 **Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
 

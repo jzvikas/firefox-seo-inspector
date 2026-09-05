@@ -145,15 +145,15 @@ Goal: explain what makes a page heavy, fragile, or technically weak.
 
 ### Security inspection
 
-- [ ] HTTPS and mixed-content checks.
-- [ ] CSP.
-- [ ] HSTS.
-- [ ] X-Frame-Options.
-- [ ] Referrer-Policy.
-- [ ] Permissions-Policy.
-- [ ] X-Content-Type-Options.
-- [ ] Cookie Secure / HttpOnly / SameSite inspection where browser APIs permit it.
-- [ ] Third-party script inventory.
+- [x] HTTPS and mixed-content checks.
+- [x] CSP.
+- [x] HSTS.
+- [x] X-Frame-Options.
+- [x] Referrer-Policy.
+- [x] Permissions-Policy.
+- [x] X-Content-Type-Options.
+- [ ] Cookie Secure / HttpOnly / SameSite inspection where browser APIs permit it. Intentionally deferred to avoid expanding cookie permissions for the current feature set.
+- [x] Third-party script inventory.
 - [ ] Suspicious inline-script heuristics without executing or uploading page code.
 
 ### v0.3.0 done when

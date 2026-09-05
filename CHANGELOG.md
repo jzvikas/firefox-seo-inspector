@@ -27,6 +27,11 @@ All notable changes to this project are documented here.
 - Language consistency checks across HTML `lang`, `Content-Language`, and self-referencing hreflang declarations.
 - Heading-quality diagnostics for H1–H6 counts, missing/multiple H1, empty headings, and skipped heading levels.
 - Automated tests for Unicode word counting, excluded non-content tags, hidden-content accounting, visibility styles, node caps, language consistency, heading quality, and thin-content heuristics.
+- Dedicated Security panel with HTTPS transport status, active/passive mixed-content detection, and severity-ranked findings.
+- Read-only capture and inspection of Content-Security-Policy, CSP Report-Only, Strict-Transport-Security, X-Frame-Options, Referrer-Policy, Permissions-Policy, and X-Content-Type-Options from the current main-document response.
+- Security heuristics for CSP framing/script policy, HSTS max-age, modern `frame-ancestors` fallback, `unsafe-url` referrer policy, and `nosniff` validation.
+- Third-party script inventory reused from the existing local asset audit, without refetching scripts or executing page code.
+- Automated tests for HSTS/CSP parsing, report-only CSP, framing protection, referrer/nosniff diagnostics, mixed-content classification/deduplication, and third-party script inventory.
 
 ## [0.2.0] - 2026-09-05
 

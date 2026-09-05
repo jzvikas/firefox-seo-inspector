@@ -12,7 +12,7 @@ function pageContext() {
   };
 }
 
-async function analyzeDocument(doc, locationLike, responseMeta) {
+async function analyzeDocument(doc, locationLike, responseMeta, securityResponseMeta) {
   const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
   const evaluation = SeoCore.evaluateFacts(facts, responseMeta || null);
   evaluation.indexability = Indexability.analyze(facts, responseMeta || null);
@@ -32,12 +32,33 @@ async function analyzeDocument(doc, locationLike, responseMeta) {
     responseMeta: responseMeta || null,
     getComputedStyle: typeof window.getComputedStyle === 'function' ? window.getComputedStyle.bind(window) : null,
   });
-  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: context, performance, performanceHints, assetAudit, thirdPartyAudit, contentAudit };
+  const securityAudit = SecurityAudit.collect(doc, {
+    pageUrl,
+    responseMeta: securityResponseMeta || null,
+    performance,
+    assetAudit,
+  });
+  return {
+    facts,
+    evaluation,
+    responseMeta: responseMeta || null,
+    securityResponseMeta: securityResponseMeta || null,
+    pageContext: context,
+    performance,
+    performanceHints,
+    assetAudit,
+    thirdPartyAudit,
+    contentAudit,
+    securityAudit,
+  };
 }
 
 async function analyzeCurrentPage() {
-  const responseMeta = await browser.runtime.sendMessage({ type: 'seoInspector.getResponseMeta' }).catch(() => null);
-  return analyzeDocument(document, window.location, responseMeta);
+  const [responseMeta, securityResponseMeta] = await Promise.all([
+    browser.runtime.sendMessage({ type: 'seoInspector.getResponseMeta' }).catch(() => null),
+    browser.runtime.sendMessage({ type: 'seoInspector.getSecurityResponseMeta' }).catch(() => null),
+  ]);
+  return analyzeDocument(document, window.location, responseMeta, securityResponseMeta);
 }
 
 function clearHighlights() {
@@ -129,7 +150,7 @@ function setWatching(enabled) {
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['content', 'href', 'rel', 'name', 'property', 'lang', 'alt', 'src', 'srcset', 'loading', 'width', 'height', 'async', 'defer', 'media', 'crossorigin', 'type', 'nomodule', 'disabled', 'hidden', 'aria-hidden', 'style', 'class'],
+    attributeFilter: ['content', 'href', 'rel', 'name', 'property', 'lang', 'alt', 'src', 'srcset', 'loading', 'width', 'height', 'async', 'defer', 'media', 'crossorigin', 'type', 'nomodule', 'disabled', 'hidden', 'aria-hidden', 'style', 'class', 'action', 'data'],
   });
 }
 

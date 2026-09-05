@@ -30,7 +30,8 @@
       "background/image-background.js",
       "background/canonical-background.js",
       "background/sitemap-membership-background.js",
-      "background/link-background.js"
+      "background/link-background.js",
+      "background/security-background.js"
     ]
   },
   "action": {
@@ -57,6 +58,7 @@
         "lib/asset-audit.js",
         "lib/third-party-audit.js",
         "lib/content-audit.js",
+        "lib/security-audit.js",
         "lib/page-extractor.js",
         "content/content.js"
       ],
