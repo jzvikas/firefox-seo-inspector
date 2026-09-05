@@ -78,6 +78,19 @@ tr:last-child td { border-bottom: 0; }
 .heading:last-child { border-bottom: 0; }
 .heading button { border: 0; background: transparent; padding: 0; text-align: left; }
 
+.serp-preview { margin: 12px; padding: 14px 16px; background: #fff; color: #202124; border: 1px solid #dadce0; border-radius: 10px; font-family: Arial, sans-serif; }
+.serp-preview.mobile { max-width: 390px; }
+.serp-site { color: #4d5156; font-size: 13px; line-height: 1.35; margin-bottom: 4px; overflow-wrap: anywhere; }
+.serp-title { color: #1a0dab; font-size: 20px; line-height: 1.3; margin-bottom: 4px; overflow-wrap: anywhere; }
+.serp-preview.mobile .serp-title { font-size: 18px; }
+.serp-description { color: #4d5156; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.serp-preview.desktop .serp-description { -webkit-line-clamp: 2; }
+.serp-preview.mobile .serp-description { -webkit-line-clamp: 3; font-size: 13px; }
+.serp-truncated::after { content: ' …'; }
+.serp-metric-good { color: var(--ok); }
+.serp-metric-bad { color: var(--warning); font-weight: 650; }
+.serp-note { padding: 10px; color: var(--muted); line-height: 1.45; }
+
 pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font-size: 11px; }
 details { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 8px; }
 summary { cursor: pointer; font-weight: 650; }
@@ -88,4 +101,5 @@ summary { cursor: pointer; font-weight: 650; }
 @media (max-width: 340px) {
   .row { grid-template-columns: 1fr; gap: 2px; }
   .score { width: 50px; height: 50px; }
+  .serp-preview { margin: 8px; padding: 12px; }
 }

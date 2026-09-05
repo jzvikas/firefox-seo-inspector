@@ -16,6 +16,8 @@ All notable changes to this project are documented here.
 - Automatic, cached `robots.txt` discovery with Googlebot-specific Allow/Disallow evaluation, matching-rule reporting, parser warnings, redirects, HTTP status, and sitemap declaration discovery.
 - Bounded on-demand sitemap scanning with sitemap-index traversal, URL membership checks, `lastmod`, gzip support when available, cancellation, document/byte limits, and scan timeouts.
 - Pure robots.txt and sitemap XML parsers with automated tests for wildcard/end-anchor rules, user-agent precedence, Allow/Disallow precedence, XML entities, CDATA, sitemap indexes, and URL membership.
+- Desktop/mobile SERP preview with local title/description pixel-width estimates, line-capacity diagnostics, truncation warnings, and decoded URL breadcrumb presentation.
+- Automated tests for SERP width estimation, missing metadata, truncation detection, device profiles, and URL presentation.
 
 ## [0.1.0] - 2026-09-05
 
