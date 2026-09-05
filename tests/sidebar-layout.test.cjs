@@ -28,7 +28,7 @@ test('every sidebar script and stylesheet reference exists on disk', () => {
   }
 });
 
-test('page type product category custom rules profiles multi-tab and crawler models load before renderers and main', () => {
+test('models and runtime recovery load before renderers and main', () => {
   const html = fs.readFileSync(sidebarPath, 'utf8');
   const scripts = scriptSources(html);
   const customRules = scripts.indexOf('../lib/custom-rules.js');
@@ -37,9 +37,12 @@ test('page type product category custom rules profiles multi-tab and crawler mod
   const pageTypeDom = scripts.indexOf('../lib/page-type-dom.js');
   const productModel = scripts.indexOf('../lib/product-page-audit.js');
   const categoryModel = scripts.indexOf('../lib/category-page-audit.js');
+  const connectionModel = scripts.indexOf('../lib/content-connection.js');
   const multiTabModel = scripts.indexOf('../lib/multi-tab-audit.js');
   const crawlerModel = scripts.indexOf('../lib/crawler-lite.js');
   const sidebarBase = scripts.indexOf('sidebar-base.js');
+  const detachedTarget = scripts.indexOf('sidebar-detached-target.js');
+  const runtimeRecovery = scripts.indexOf('sidebar-runtime-recovery.js');
   const pageTypeRenderer = scripts.indexOf('sidebar-page-type.js');
   const productRenderer = scripts.indexOf('sidebar-product.js');
   const categoryRenderer = scripts.indexOf('sidebar-category.js');
@@ -56,10 +59,13 @@ test('page type product category custom rules profiles multi-tab and crawler mod
   assert.ok(pageTypeDom > pageType);
   assert.ok(productModel > pageTypeDom);
   assert.ok(categoryModel > productModel);
+  assert.ok(connectionModel > categoryModel);
   assert.ok(multiTabModel >= 0);
   assert.ok(crawlerModel >= 0);
-  assert.ok(sidebarBase > categoryModel);
-  assert.ok(pageTypeRenderer > sidebarBase);
+  assert.ok(sidebarBase > connectionModel);
+  assert.ok(detachedTarget > sidebarBase);
+  assert.ok(runtimeRecovery > detachedTarget);
+  assert.ok(pageTypeRenderer > runtimeRecovery);
   assert.ok(productRenderer > sidebarBase);
   assert.ok(categoryRenderer > productRenderer);
   assert.ok(imagesNetwork >= 0);
@@ -79,27 +85,27 @@ test('page type product category custom rules profiles multi-tab and crawler mod
   assert.ok(main > imagesRules);
 });
 
-test('Product Category Rules Profiles Tabs and Crawler panels stay in sync with renderAll', () => {
+test('Product Category Rules Profiles Tabs and Crawler panels stay in sync with renderAll boundaries', () => {
   const html = fs.readFileSync(sidebarPath, 'utf8');
   const main = read('src/sidebar/sidebar-main.js');
   assert.match(html, /data-tab="product"/);
   assert.match(html, /<section id="product" class="panel"><\/section>/);
-  assert.match(main, /\brenderProduct\(\);/);
+  assert.match(main, /safeRender\('product',\s*renderProduct\)/);
   assert.match(html, /data-tab="category"/);
   assert.match(html, /<section id="category" class="panel"><\/section>/);
-  assert.match(main, /\brenderCategory\(\);/);
+  assert.match(main, /safeRender\('category',\s*renderCategory\)/);
   assert.match(html, /data-tab="rules"/);
   assert.match(html, /<section id="rules" class="panel"><\/section>/);
-  assert.match(main, /\brenderRules\(\);/);
+  assert.match(main, /safeRender\('rules',\s*renderRules\)/);
   assert.match(html, /data-tab="profiles"/);
   assert.match(html, /<section id="profiles" class="panel"><\/section>/);
-  assert.match(main, /\brenderProfiles\(\);/);
+  assert.match(main, /safeRender\('profiles',\s*renderProfiles\)/);
   assert.match(html, /data-tab="multitab"/);
   assert.match(html, /<section id="multitab" class="panel"><\/section>/);
-  assert.match(main, /\brenderMultiTab\(\);/);
+  assert.match(main, /safeRender\('multitab',\s*renderMultiTab\)/);
   assert.match(html, /data-tab="crawler"/);
   assert.match(html, /<section id="crawler" class="panel"><\/section>/);
-  assert.match(main, /\brenderCrawler\(\);/);
+  assert.match(main, /safeRender\('crawler',\s*renderCrawler\)/);
 });
 
 test('content script loads page type product category and policy dependencies before content bootstrap', () => {
@@ -121,10 +127,11 @@ test('content script loads page type product category and policy dependencies be
   assert.ok(content > categoryAudit);
 });
 
-test('crawler background is registered and page type/product/category audits add no new permission', () => {
+test('runtime recovery has only the additional scripting permission needed to reconnect existing HTTP tabs', () => {
   const manifest = JSON.parse(read('src/manifest.json'));
   assert.ok(manifest.background.scripts.includes('background/crawler-background.js'));
-  assert.deepEqual(manifest.permissions.slice().sort(), ['storage', 'tabs', 'webRequest']);
+  assert.deepEqual(manifest.permissions.slice().sort(), ['scripting', 'storage', 'tabs', 'webRequest']);
+  assert.deepEqual(manifest.host_permissions.slice().sort(), ['http://*/*', 'https://*/*']);
 });
 
 test('Profiles source remains public-safe and does not embed configured hostnames', () => {
