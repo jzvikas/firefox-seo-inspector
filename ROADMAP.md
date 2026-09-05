@@ -334,7 +334,7 @@ Goal: make the extension dependable enough for continuous personal use.
 
 ### Performance
 
-- [ ] Fast initial sidebar render.
+- [x] Fast initial sidebar render.
 - [ ] Heavy checks run incrementally or on demand.
 - [ ] Large DOMs and link/image inventories do not freeze the sidebar.
 - [ ] Memory is released when tabs close or audits are cancelled.
