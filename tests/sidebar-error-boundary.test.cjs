@@ -23,6 +23,14 @@ function node(text) {
   };
 }
 
+function flattenText(root, output) {
+  const result = output || [];
+  if (!root) return result;
+  if (root.textContent) result.push(String(root.textContent));
+  for (const child of root.children || []) flattenText(child, result);
+  return result;
+}
+
 test('one renderer exception is isolated and later Inspector panels still render', async () => {
   const panels = new Map();
   const ids = [
@@ -39,8 +47,9 @@ test('one renderer exception is isolated and later Inspector panels still render
   const rendered = [];
   const statuses = [];
 
+  const quietConsole = Object.assign({}, console, { error() {} });
   const context = vm.createContext({
-    console,
+    console: quietConsole,
     Promise,
     setTimeout,
     URL: Object.assign(URL, {
@@ -120,7 +129,7 @@ test('one renderer exception is isolated and later Inspector panels still render
   assert.equal(context.state.uiErrors.length, 1);
   assert.equal(context.state.uiErrors[0].section, 'category');
   assert.equal(context.state.runtimeErrors.length, 1);
-  assert.match(panels.get('category').children.map((child) => child.textContent).join(' '), /Inspector UI section failed|category renderer failed/);
+  assert.match(flattenText(panels.get('category')).join(' '), /Inspector UI section failed|category renderer failed/);
   assert.match(statusCounts.textContent, /1 Inspector UI section failed/);
 
   assert.equal(windowListeners.has('unhandledrejection'), true);
