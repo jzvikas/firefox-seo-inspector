@@ -207,10 +207,10 @@ Goal: make the extension useful after deployments and repeated audits.
 
 ### Domain profiles
 
-- [ ] Local-only profiles per hostname.
-- [ ] Per-domain thresholds and expected schema/hreflang patterns.
-- [ ] Per-domain ignore rules.
-- [ ] Never commit personal domain profiles into the repository.
+- [x] Local-only profiles per hostname.
+- [x] Per-domain thresholds and expected schema/hreflang patterns.
+- [x] Per-domain ignore rules.
+- [x] Never commit personal domain profiles into the repository.
 
 ### Ignore rules
 
@@ -371,7 +371,7 @@ Goal: make the extension dependable enough for continuous personal use.
 
 - [ ] Complete feature documentation.
 - [ ] Keyboard-shortcut documentation.
-- [x] Custom-rule/profile documentation for custom rules; per-domain profile documentation remains pending with the profile feature.
+- [x] Custom-rule/profile documentation.
 - [ ] Troubleshooting section.
 - [ ] Development and release instructions.
 
