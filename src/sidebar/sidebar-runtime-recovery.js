@@ -1,6 +1,7 @@
 'use strict';
 
 function resetRefreshState() {
+  if (typeof releasePageScopedState === 'function') releasePageScopedState();
   state.rawReport = null;
   state.rawDiff = null;
   state.indexabilityRawDiff = undefined;
