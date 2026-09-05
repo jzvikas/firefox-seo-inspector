@@ -6,6 +6,10 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Automatic inspected-tab recovery after an extension reload: the Inspector locally pings the active HTTP/HTTPS tab and, only when the content script is missing, restores its own manifest-declared packaged content-script bundle through Firefox `scripting` without requiring a website reload.
+- Explicit unsupported/restricted-page states for Firefox internal pages, local files, non-HTTP schemes, and HTTP/HTTPS pages where Firefox refuses extension injection, replacing the previous generic reload advice.
+- Per-panel Inspector renderer error boundaries plus visible handling for uncaught window errors and unhandled promise rejections, so one UI failure no longer has to collapse the entire detached Inspector into an apparently blank state.
+- Refresh-generation protection prevents a slower audit/reconnect from an older tab from overwriting a newer active tab after rapid navigation or tab switching; runtime error summaries remain bounded, sanitized, local, and in-memory only.
 - Parameterized category/faceted URLs now combine canonical state, meta robots, and `X-Robots-Tag`, including effective `noindex` handling and explicit conflicting `index`/`noindex` diagnostics.
 - Category pagination can be checked on demand with the existing bounded, cancellable, credential-free link checker; broken, redirecting, and unknown pagination targets are summarized and broken anchors can be highlighted in-page.
 - Tabs and Crawler now group distinct URLs by pagination family and report repeated title/meta-description patterns while preserving filter/sort parameters so unrelated facets are not mixed together.
