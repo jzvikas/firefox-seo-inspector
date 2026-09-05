@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 
 const manifest = JSON.parse(fs.readFileSync('src/manifest.json', 'utf8'));
-const archivePath = `dist/firefox-seo-inspector-${manifest.version}.xpi`;
+const archivePath = `dist/seo-inspector-${manifest.version}.xpi`;
 const checksumPath = `${archivePath}.sha256`;
 if (!fs.existsSync(archivePath)) throw new Error(`Missing ${archivePath}`);
 if (!fs.existsSync(checksumPath)) throw new Error(`Missing ${checksumPath}`);
