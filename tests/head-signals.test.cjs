@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const HeadSignals = require('../src/lib/head-signals.js');
 
 test('decodes common named and numeric HTML entities', () => {
-  assert.equal(HeadSignals.decodeHtml('a&amp;b &#x17D; &#381;'), 'a&b Ž ž');
+  assert.equal(HeadSignals.decodeHtml('a&amp;b &#x17D; &#382;'), 'a&b Ž ž');
 });
 
 test('parses quoted, single-quoted, and unquoted attributes', () => {
