@@ -22,7 +22,8 @@
       "lib/sitemap.js",
       "lib/head-signals.js",
       "background/background.js",
-      "background/hreflang-background.js"
+      "background/hreflang-background.js",
+      "background/image-background.js"
     ]
   },
   "action": {
