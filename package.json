@@ -4,7 +4,7 @@
   "private": true,
   "description": "Source, tests, and deterministic build tooling for Firefox SEO Inspector.",
   "scripts": {
-    "lint": "node scripts/static-check.mjs && node scripts/manifest-check.mjs && node scripts/privacy-scan.mjs",
+    "lint": "node scripts/static-check.mjs && node scripts/manifest-check.mjs && node scripts/privacy-scan.mjs && node scripts/release-consistency-check.mjs",
     "test": "node --test tests/*.test.cjs",
     "build": "node scripts/build.mjs",
     "verify:build": "node scripts/verify-build.mjs",
