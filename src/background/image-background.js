@@ -6,17 +6,6 @@ const IMAGE_REQUEST_TIMEOUT_MS = 10000;
 const IMAGE_SCAN_TIMEOUT_MS = 45000;
 const imageOperations = new Map();
 
-function imageHttpUrl(value) {
-  try {
-    const url = new URL(value);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-    url.hash = '';
-    return url.href;
-  } catch (_error) {
-    return null;
-  }
-}
-
 function imageController(timeoutMs, externalSignal) {
   const controller = new AbortController();
   let timedOut = false;
@@ -37,17 +26,6 @@ function imageController(timeoutMs, externalSignal) {
       if (externalSignal) externalSignal.removeEventListener('abort', externalAbort);
     },
   };
-}
-
-function contentLength(headers) {
-  const value = Number(headers && headers.get ? headers.get('content-length') : 0);
-  return Number.isFinite(value) && value > 0 ? value : 0;
-}
-
-function totalFromContentRange(value) {
-  const match = String(value || '').match(/\/\s*(\d+)\s*$/);
-  const total = match ? Number(match[1]) : 0;
-  return Number.isFinite(total) && total > 0 ? total : 0;
 }
 
 function networkErrorResult(url, reason) {
@@ -75,6 +53,7 @@ async function headImage(url, externalSignal) {
       cache: 'no-store',
       signal: linked.controller.signal,
     });
+    const sizeBytes = ImageNetworkUtils.contentLength(response.headers);
     return {
       requestedUrl: url,
       finalUrl: response.url || url,
@@ -82,8 +61,8 @@ async function headImage(url, externalSignal) {
       statusText: response.statusText || '',
       redirected: response.redirected || response.url !== url,
       contentType: response.headers.get('content-type') || '',
-      sizeBytes: contentLength(response.headers),
-      sizeSource: contentLength(response.headers) ? 'content-length' : '',
+      sizeBytes,
+      sizeSource: sizeBytes ? 'content-length' : '',
       error: null,
     };
   } catch (error) {
@@ -109,10 +88,7 @@ async function rangeImage(url, externalSignal) {
       cache: 'no-store',
       signal: linked.controller.signal,
     });
-    const rangeTotal = totalFromContentRange(response.headers.get('content-range'));
-    const length = contentLength(response.headers);
-    const sizeBytes = rangeTotal || (response.status === 200 ? length : 0);
-    if (response.body && typeof response.body.cancel === 'function') response.body.cancel().catch(() => {});
+    const size = ImageNetworkUtils.sizeFromRangeResponse(response.status, response.headers);
     return {
       requestedUrl: url,
       finalUrl: response.url || url,
@@ -120,8 +96,8 @@ async function rangeImage(url, externalSignal) {
       statusText: response.statusText || '',
       redirected: response.redirected || response.url !== url,
       contentType: response.headers.get('content-type') || '',
-      sizeBytes,
-      sizeSource: rangeTotal ? 'content-range' : sizeBytes ? 'content-length' : '',
+      sizeBytes: size.sizeBytes,
+      sizeSource: size.sizeSource,
       error: null,
     };
   } catch (error) {
@@ -138,10 +114,7 @@ async function rangeImage(url, externalSignal) {
 async function inspectImage(url, externalSignal) {
   const head = await headImage(url, externalSignal);
   if (externalSignal && externalSignal.aborted) return head;
-
-  const methodUnsupported = head.status === 405 || head.status === 501;
-  const shouldFallback = Boolean(head.error) || methodUnsupported || (!head.sizeBytes && head.status > 0 && head.status < 400);
-  if (!shouldFallback) return head;
+  if (!ImageNetworkUtils.shouldRangeFallback(head)) return head;
 
   const ranged = await rangeImage(url, externalSignal);
   if (!ranged.error && ranged.status > 0) return ranged;
@@ -149,24 +122,9 @@ async function inspectImage(url, externalSignal) {
   return ranged;
 }
 
-function uniqueImageUrls(values) {
-  const urls = [];
-  const seen = new Set();
-  let capped = false;
-  for (const value of Array.isArray(values) ? values : []) {
-    const raw = typeof value === 'string' ? value : value && value.src;
-    const url = imageHttpUrl(raw);
-    if (!url || seen.has(url)) continue;
-    seen.add(url);
-    if (urls.length < IMAGE_MAX_TARGETS) urls.push(url);
-    else capped = true;
-  }
-  return { urls, capped };
-}
-
 async function checkImages(message) {
   const operationId = String(message.operationId || `images-${Date.now()}`);
-  const selected = uniqueImageUrls(message.images);
+  const selected = ImageNetworkUtils.uniqueUrls(message.images, IMAGE_MAX_TARGETS);
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
