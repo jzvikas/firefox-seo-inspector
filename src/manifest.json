@@ -64,6 +64,8 @@
         "lib/content-audit.js",
         "lib/security-audit.js",
         "lib/page-extractor.js",
+        "lib/page-type.js",
+        "lib/page-type-dom.js",
         "content/content.js"
       ],
       "run_at": "document_idle"
