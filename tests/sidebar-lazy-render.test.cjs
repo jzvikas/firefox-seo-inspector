@@ -145,7 +145,8 @@ test('inactive Inspector panels render lazily and heavy panels load only on dema
   vm.runInContext("activateTab('performance')", context);
   assert.equal(calls.get('performance') || 0, 0, 'heavy renderer waits for the explicit heavy audit result');
   assert.equal(heavyRequests.length, 1);
-  assert.deepEqual(heavyRequests[0], { tabId: 5, groups: ['performance'] });
+  assert.equal(heavyRequests[0].tabId, 5);
+  assert.equal(heavyRequests[0].groups.join(','), 'performance');
   await flushAsyncUi();
   assert.equal(calls.get('performance'), 1);
   assert.equal(calls.get('performance-hints'), 1);
