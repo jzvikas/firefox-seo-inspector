@@ -60,3 +60,64 @@ test('page comparison wrapper boots using the sidebar active tab state', () => {
   context.state.tabId = 77;
   assert.equal(vm.runInContext('currentActiveTab.id', context), 77);
 });
+
+test('multi-tab sidebar renderer boots without starting a scan', () => {
+  function node() {
+    return {
+      children: [],
+      appendChild(child) { this.children.push(child); return child; },
+      addEventListener() {},
+      setAttribute() {},
+      click() {},
+      className: '',
+      textContent: '',
+      style: {},
+    };
+  }
+  const panel = node();
+  const context = vm.createContext({
+    URL,
+    Blob: function Blob() {},
+    console,
+    setTimeout,
+    clearTimeout,
+    document: {
+      getElementById(id) { return id === 'multitab' ? panel : null; },
+      createElement() { return node(); },
+      createTextNode(text) { return { textContent: String(text) }; },
+    },
+    browser: {
+      tabs: {
+        query: async () => [],
+        sendMessage: async () => null,
+      },
+    },
+    MultiTabAudit: {
+      MAX_TABS: 100,
+      CONCURRENCY: 6,
+      filterRows(rows) { return rows || []; },
+      sortRows(rows) { return rows || []; },
+      duplicateSummary(rows) { return { rows: rows || [], titles: [], descriptions: [], h1: [] }; },
+      toCsv() { return ''; },
+      toJson() { return '{}'; },
+    },
+    clear(target) { target.children.length = 0; },
+    el(_tag, _className, text) {
+      const output = node();
+      output.textContent = text || '';
+      return output;
+    },
+    badge(text) {
+      const output = node();
+      output.textContent = text;
+      return output;
+    },
+  });
+  context.URL.createObjectURL = () => 'blob:test';
+  context.URL.revokeObjectURL = () => {};
+
+  vm.runInContext(source('sidebar-multi-tab.js'), context, { filename: 'sidebar-multi-tab.js' });
+  assert.doesNotThrow(() => vm.runInContext('renderMultiTab()', context));
+  assert.ok(panel.children.length >= 3);
+  assert.equal(vm.runInContext('multiTabState.running', context), false);
+});
