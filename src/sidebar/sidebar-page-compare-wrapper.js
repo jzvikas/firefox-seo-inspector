@@ -67,6 +67,44 @@ reportFromFetchedCompare = async function reportFromFetchedCompareWithDocumentBa
   };
 };
 
+runUrlComparison = async function runUrlComparisonWithDomainProfiles(urlA, urlB) {
+  if (pageCompareState.loading) return;
+  pageCompareState.urlA = String(urlA || '').trim();
+  pageCompareState.urlB = String(urlB || '').trim();
+  if (!pageCompareIsHttpUrl(pageCompareState.urlA) || !pageCompareIsHttpUrl(pageCompareState.urlB)) {
+    pageCompareState.error = 'Both comparison values must be HTTP or HTTPS URLs.';
+    renderCompare();
+    return;
+  }
+
+  pageCompareState.loading = true;
+  pageCompareState.error = '';
+  renderCompare();
+  try {
+    const [leftResource, rightResource] = await Promise.all([
+      fetchComparableUrl(pageCompareState.urlA),
+      fetchComparableUrl(pageCompareState.urlB),
+    ]);
+    const leftError = fetchedCompareError(leftResource, 'URL A');
+    const rightError = fetchedCompareError(rightResource, 'URL B');
+    if (leftError || rightError) throw new Error([leftError, rightError].filter(Boolean).join(' '));
+    const [leftReport, rightReport] = await Promise.all([
+      reportFromFetchedCompare(leftResource),
+      reportFromFetchedCompare(rightResource),
+    ]);
+    pageCompareState.result = PageCompare.compareReports(leftReport, rightReport);
+    pageCompareState.leftLabel = `URL A · ${leftResource.url || pageCompareState.urlA}`;
+    pageCompareState.rightLabel = `URL B · ${rightResource.url || pageCompareState.urlB}`;
+    pageCompareState.mode = 'url';
+  } catch (error) {
+    pageCompareState.result = null;
+    pageCompareState.error = error && error.message ? error.message : 'URL comparison failed.';
+  } finally {
+    pageCompareState.loading = false;
+    renderCompare();
+  }
+};
+
 const renderCompareWithoutPageComparison = renderCompare;
 renderCompare = function renderCompareWithPageComparison() {
   const currentTabId = currentActiveTab && typeof currentActiveTab.id === 'number' ? currentActiveTab.id : null;
