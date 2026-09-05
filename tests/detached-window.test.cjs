@@ -132,7 +132,7 @@ test('manifest uses a toolbar launcher, neutral branding, and no longer register
   assert.equal(manifest.action.default_popup, 'launcher/launcher.html');
   assert.equal(Object.prototype.hasOwnProperty.call(manifest, 'sidebar_action'), false);
   assert.ok(manifest.background.scripts.includes('background/window-background.js'));
-  assert.deepEqual(manifest.permissions, ['storage', 'tabs', 'webRequest']);
+  assert.deepEqual(manifest.permissions, ['scripting', 'storage', 'tabs', 'webRequest']);
 
   const inspectorHtml = source('src/sidebar/sidebar.html');
   const launcherHtml = source('src/launcher/launcher.html');
@@ -210,7 +210,7 @@ test('detached inspector follows activated normal tabs but ignores its own popup
   assert.equal(h.messages.length, 0);
 });
 
-test('detached target adapter requests the background target instead of currentWindow', () => {
+test('detached target adapter requests the background target and runtime recovery loads before main', () => {
   const adapter = source('src/sidebar/sidebar-detached-target.js');
   assert.match(adapter, /seoInspector\.getTargetTab/);
   assert.match(adapter, /seoInspector\.targetChanged/);
@@ -219,8 +219,9 @@ test('detached target adapter requests the background target instead of currentW
   const html = source('src/sidebar/sidebar.html');
   const baseIndex = html.indexOf('sidebar-base.js');
   const adapterIndex = html.indexOf('sidebar-detached-target.js');
+  const recoveryIndex = html.indexOf('sidebar-runtime-recovery.js');
   const mainIndex = html.indexOf('sidebar-main.js');
-  assert.ok(baseIndex >= 0 && adapterIndex > baseIndex && mainIndex > adapterIndex);
+  assert.ok(baseIndex >= 0 && adapterIndex > baseIndex && recoveryIndex > adapterIndex && mainIndex > recoveryIndex);
 });
 
 test('toolbar launcher passes the current browser tab to the detached-window controller', async () => {
