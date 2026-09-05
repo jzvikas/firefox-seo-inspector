@@ -206,12 +206,19 @@
 
     let primary = TYPES.GENERIC;
     let primaryScore = 0;
-    const priority = [TYPES.SEARCH, TYPES.PRODUCT, TYPES.ARTICLE, TYPES.CATEGORY];
-    for (const type of priority) {
-      const score = scores[type] || 0;
-      if (score > primaryScore) {
-        primary = type;
-        primaryScore = score;
+    // Explicit search schema/path/query is a stronger page-purpose signal than
+    // Product/Article entities that may legitimately appear inside result cards.
+    if ((searchSchema || searchByUrl) && scores.search >= 4) {
+      primary = TYPES.SEARCH;
+      primaryScore = scores.search;
+    } else {
+      const priority = [TYPES.PRODUCT, TYPES.ARTICLE, TYPES.CATEGORY];
+      for (const type of priority) {
+        const score = scores[type] || 0;
+        if (score > primaryScore) {
+          primary = type;
+          primaryScore = score;
+        }
       }
     }
     if (primaryScore < 4) {
