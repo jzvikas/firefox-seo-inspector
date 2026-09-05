@@ -6,6 +6,9 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Routine rendered-page audits now keep Performance, Content, and Security collectors out of the initial SEO report; those heavy groups load only when their panel or an explicit workflow needs them and are cached per document revision.
+- Full JSON export and regression snapshot save/compare explicitly load the Performance/Content/Security data they promise, while open-tab page comparison loads the Security group for both tabs before comparing response-header protections.
+- On-demand heavy-audit regression coverage locks the lightweight core boundary, document-mutation cache invalidation, explicit workflow dependencies, and lazy panel cache reuse without adding permissions, telemetry, or new page requests.
 - Inspector rendering is now panel-lazy: startup renders only the active panel, inactive panels stay dirty until opened, and Rules/Profiles defer local-storage reads until their panels are first rendered while per-panel error isolation and retry behavior remain intact.
 - Authenticated same-page **Compare raw HTML** requests are now capped at 2 MiB, limited to 12 seconds, explicitly cancellable from Content and Compare, and pinned to the originating tab/page so a late response cannot overwrite a newer inspected page.
 - Explicit URL A vs URL B comparison now runs both credential-free requests under one cancellable operation with the existing 2 MiB/12-second per-URL bounds plus a 15-second total scan timeout and a visible Cancel control.
