@@ -22,6 +22,7 @@ function renderAll() {
   renderRules();
   renderProfiles();
   renderMultiTab();
+  renderCrawler();
 }
 
 function activateTab(name) {
@@ -63,6 +64,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
 
 window.addEventListener('unload', () => {
   if (typeof state.tabId === 'number') browser.tabs.sendMessage(state.tabId, { type: 'seoInspector.watch', enabled: false }).catch(() => {});
+  if (crawlerState && crawlerState.running) browser.runtime.sendMessage({ type: 'seoInspector.crawler.cancel', scanId: String(crawlerState.scanId) }).catch(() => {});
 });
 
 refresh().catch(() => setStatus('Unable to start', 'Try reopening the sidebar.'));
