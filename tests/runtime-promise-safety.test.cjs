@@ -24,8 +24,12 @@ function asyncFunctionNames(files) {
   return names;
 }
 
+function runtimeFiles() {
+  return [...jsFiles('src/sidebar'), ...jsFiles('src/background')];
+}
+
 test('event listeners do not return known async tasks without an explicit rejection handler', () => {
-  const files = [...jsFiles('src/sidebar'), ...jsFiles('src/background')];
+  const files = runtimeFiles();
   const asyncNames = asyncFunctionNames(files);
   const unsafe = [];
 
@@ -46,6 +50,20 @@ test('event listeners do not return known async tasks without an explicit reject
   }
 
   assert.deepEqual(unsafe, [], `Promise-returning event callbacks need explicit rejection handling:\n${unsafe.join('\n')}`);
+});
+
+test('runtime event listeners do not use bare async arrow callbacks', () => {
+  const unsafe = [];
+  for (const file of runtimeFiles()) {
+    const matcher = /(?:addEventListener|addListener)\s*\([^,]+,\s*async\s*\([^)]*\)\s*=>/g;
+    let match;
+    while ((match = matcher.exec(file.source))) {
+      const line = file.source.slice(0, match.index).split('\n').length;
+      unsafe.push(`${file.name}:${line}`);
+    }
+  }
+
+  assert.deepEqual(unsafe, [], `Use a non-async event callback that starts a task with an explicit .catch():\n${unsafe.join('\n')}`);
 });
 
 test('Rules user actions route unexpected task failures into the Inspector runtime boundary', () => {
