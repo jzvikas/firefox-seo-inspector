@@ -7,6 +7,8 @@ const highlightNodes = new Set();
 function pageContext() {
   return {
     devicePixelRatio: Math.max(1, Number(window.devicePixelRatio) || 1),
+    viewportWidth: Math.max(1, Number(window.innerWidth) || 1),
+    viewportHeight: Math.max(1, Number(window.innerHeight) || 1),
   };
 }
 
@@ -14,8 +16,16 @@ async function analyzeDocument(doc, locationLike, responseMeta) {
   const facts = PageExtractor.extract(doc, locationLike, { performance: window.performance });
   const evaluation = SeoCore.evaluateFacts(facts, responseMeta || null);
   evaluation.indexability = Indexability.analyze(facts, responseMeta || null);
-  const performance = PerformanceAudit.collect(doc, window.performance, locationLike && locationLike.href ? locationLike.href : '');
-  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: pageContext(), performance };
+  const pageUrl = locationLike && locationLike.href ? locationLike.href : '';
+  const performance = PerformanceAudit.collect(doc, window.performance, pageUrl);
+  const context = pageContext();
+  const performanceHints = PerformanceHints.collect(doc, {
+    baseUrl: pageUrl,
+    viewportWidth: context.viewportWidth,
+    viewportHeight: context.viewportHeight,
+    getComputedStyle: typeof window.getComputedStyle === 'function' ? window.getComputedStyle.bind(window) : null,
+  }, performance);
+  return { facts, evaluation, responseMeta: responseMeta || null, pageContext: context, performance, performanceHints };
 }
 
 async function analyzeCurrentPage() {
@@ -107,7 +117,7 @@ function setWatching(enabled) {
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['content', 'href', 'rel', 'name', 'property', 'lang', 'alt', 'src', 'srcset'],
+    attributeFilter: ['content', 'href', 'rel', 'name', 'property', 'lang', 'alt', 'src', 'srcset', 'loading', 'width', 'height', 'async', 'defer', 'media', 'crossorigin'],
   });
 }
 
