@@ -33,7 +33,11 @@ reportFromFetchedCompare = function reportFromFetchedCompareWithDocumentBase(res
   };
   const securityResponseMeta = resource.securityResponseMeta || null;
   const facts = PageExtractor.extract(doc, url, { performance: null });
-  const evaluation = SeoCore.evaluateFacts(facts, responseMeta);
+  const rulesConfig = state.report && state.report.customRules
+    ? CustomRules.normalize(state.report.customRules)
+    : CustomRules.normalize(null);
+  const baseEvaluation = SeoCore.evaluateFacts(facts, responseMeta, CustomRules.toSeoCoreOptions(rulesConfig));
+  const evaluation = CustomRules.applyEvaluation(baseEvaluation, facts, rulesConfig);
   evaluation.indexability = Indexability.analyze(facts, responseMeta);
   const securityAudit = SecurityAudit.collect(doc, {
     pageUrl: facts.url,
@@ -41,7 +45,7 @@ reportFromFetchedCompare = function reportFromFetchedCompareWithDocumentBase(res
     performance: null,
     assetAudit: null,
   });
-  return { facts, evaluation, responseMeta, securityResponseMeta, securityAudit };
+  return { facts, evaluation, responseMeta, securityResponseMeta, customRules: rulesConfig, securityAudit };
 };
 
 const renderCompareWithoutPageComparison = renderCompare;

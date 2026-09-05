@@ -6,6 +6,13 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Local-only Rules panel with versioned audit configuration stored in Firefox `browser.storage.local`, including Save and Reset defaults actions.
+- Configurable title/meta-description thresholds, oversized-image ratio, and a real-byte image file-size threshold that is evaluated only when byte size is known.
+- Required-signal policy for title, meta description, canonical, H1, typed structured data, hreflang, and HTTPS.
+- Per-check enable/disable controls and Critical/Warning/Info severity overrides with score/severity counters recalculated after policy is applied.
+- Custom audit policy is applied consistently to rendered audits, same-page raw HTML audits, open-tab comparisons, and explicit URL A/B comparisons.
+- Image file-size policy findings synchronize into the global Issues list and score after Resource Timing or the explicit image network check provides a known size.
+- Automated custom-rule normalization, validation, policy, scoring, image-limit, and sidebar dependency/layout tests; sidebar script references are checked for existence and dependency-safe order.
 - Dedicated Performance panel with DOM element count/depth, observed request count, known transferred/encoded bytes, third-party request/byte summary, and resource-type breakdown.
 - Navigation Timing diagnostics for TTFB, DNS, connection, TLS, response download, DOMContentLoaded, load event, protocol, redirect count, and HTML transfer size.
 - Largest-resource and slowest-resource rankings plus a bounded Resource Timing table for up to 1,000 subresource entries.
@@ -54,6 +61,11 @@ All notable changes to this project are documented here.
 - URL comparison preserves HTML error responses such as 404/500 pages, rejects non-HTML responses, uses the final URL as the parsed document base, and never executes fetched page scripts in the comparison parser.
 - Page comparison context resets rendered tab results when the current tab or its URL changes, including SPA navigation.
 - Automated tests for page-comparison summaries, deterministic/equal diffs, security and SEO headers, stable issue IDs, bounded inventories, text limits, and schema-type normalization.
+
+### Fixed
+
+- Restored sidebar startup after the page-comparison update by backing the compare UI's active-tab context with the canonical sidebar `state.tabId` instead of an undefined global.
+- Added an automated Node `vm` sidebar startup smoke test so the page-comparison script chain is executed together and this class of runtime `ReferenceError` is caught by CI.
 
 ## [0.2.0] - 2026-09-05
 

@@ -157,9 +157,19 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Raw URL HTML is parsed locally with the fetched page's final URL as the document base. The parser does not execute scripts from fetched comparison pages.
 - Tab-comparison results are cleared when the current tab or its URL changes, preventing a stale comparison from surviving normal or SPA navigation.
 
+### Custom rules
+
+- Dedicated **Rules** tab with local-only configuration stored in `browser.storage.local`.
+- Configurable title/meta-description length thresholds, oversized-image ratio, and real-byte image file-size limit.
+- Required-signal toggles for title, description, canonical, H1, typed structured data, hreflang, and HTTPS.
+- Every listed check can be enabled/disabled independently and assigned a Critical/Warning/Info severity override.
+- Custom policy recalculates issue counters and SEO score and is applied consistently to rendered, raw-source, open-tab, and URL A/B audits.
+- The image byte-size rule enters the global Issues list only when a size is actually known from Resource Timing or the explicit image network check.
+- **Reset defaults** removes the local rule record and restores built-in policy. See [CUSTOM_RULES.md](CUSTOM_RULES.md).
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is local custom rules and personal audit configuration.
+See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is local domain profiles and ignore rules.
 
 ## Install for development
 
@@ -185,7 +195,7 @@ The Content panel performs a bounded local DOM scan and does not make network re
 
 The Security panel reads current-page DOM/resource references plus selected security headers already observed on the main document. It does not fetch external security databases or issue extra security-audit requests. Cookie Secure/HttpOnly/SameSite inspection is not enabled, so the extension does not request cookie access for this feature.
 
-Snapshot history and regression summaries are stored only in `browser.storage.local`. The history is capped at 50 records per exact normalized URL. Regression snapshots store bounded summaries rather than full performance/resource inventories, and on-demand network status counts are included only when those checks actually ran. No snapshot or regression data is sent anywhere by the extension.
+Snapshot history, regression summaries, and custom audit rules are stored only in `browser.storage.local`. Snapshot history is capped at 50 records per exact normalized URL. Regression snapshots store bounded summaries rather than full performance/resource inventories, and on-demand network status counts are included only when those checks actually ran. Custom rules contain policy values only and are not uploaded. No snapshot, regression, or rule data is sent anywhere by the extension.
 
 **Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. **URL A vs URL B** is a separate credential-free comparison and never uses page credentials. See [PRIVACY.md](PRIVACY.md).
 

@@ -198,12 +198,12 @@ Goal: make the extension useful after deployments and repeated audits.
 
 ### Custom rules
 
-- [ ] Local rules configuration.
-- [ ] Title and description thresholds.
-- [ ] Image-size threshold.
-- [ ] Required canonical/H1/meta/schema/hreflang/HTTPS checks.
-- [ ] Enable/disable individual checks.
-- [ ] Custom severity overrides.
+- [x] Local rules configuration.
+- [x] Title and description thresholds.
+- [x] Image-size threshold.
+- [x] Required canonical/H1/meta/schema/hreflang/HTTPS checks.
+- [x] Enable/disable individual checks.
+- [x] Custom severity overrides.
 
 ### Domain profiles
 
@@ -242,8 +242,8 @@ Goal: make the extension useful after deployments and repeated audits.
 ### v0.4.0 done when
 
 - [x] A before/after deployment audit can be completed from saved local snapshots.
-- [ ] Repeated personal checks can be customized without modifying source code.
-- [ ] Custom configuration remains local and public-repository-safe.
+- [x] Repeated personal checks can be customized without modifying source code.
+- [x] Custom configuration remains local and public-repository-safe.
 
 ## v0.5.0 — Multi-page audit, crawler lite, and e-commerce SEO
 
@@ -371,7 +371,7 @@ Goal: make the extension dependable enough for continuous personal use.
 
 - [ ] Complete feature documentation.
 - [ ] Keyboard-shortcut documentation.
-- [ ] Custom-rule/profile documentation.
+- [x] Custom-rule/profile documentation for custom rules; per-domain profile documentation remains pending with the profile feature.
 - [ ] Troubleshooting section.
 - [ ] Development and release instructions.
 

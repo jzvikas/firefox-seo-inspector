@@ -19,6 +19,7 @@ function renderAll() {
   renderSchema();
   renderSocial();
   renderCompare();
+  renderRules();
 }
 
 function activateTab(name) {
