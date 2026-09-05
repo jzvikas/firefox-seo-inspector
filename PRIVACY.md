@@ -16,6 +16,14 @@ Domain profiles are also stored only in `browser.storage.local`. A profile conta
 
 HTTP response metadata for the current browser session is held in Firefox `storage.session`, which is memory-backed and cleared when the browser session ends.
 
+## Local storage schema migrations
+
+Persistent local data uses a versioned migration coordinator. The coordinator stores one small metadata record, `storageSchema:v1`, containing only the supported schema version and the time a migration completed. It does not contain page URLs, domain-profile hostnames, profile labels, snapshot contents, or inspected page content.
+
+When adopting an older supported storage layout, the extension normalizes existing Rules and Profiles locally and can merge legacy `snapshot:*` records into the current versioned snapshot history. Replacement data is written before any legacy key is removed, and the global schema marker is written last. If a migration is interrupted, the marker is not advanced and the operation is safe to retry.
+
+Migration status returned inside the extension contains only schema versions and bounded counts. It is not sent to a server or analytics service. If an older extension build encounters a local schema version newer than it supports, it does not downgrade that storage. Auditing may remain readable, while Rules/Profile/Snapshot mutation controls become read-only to prevent rollback data loss. The migration and downgrade behavior is documented in [docs/STORAGE_MIGRATIONS.md](docs/STORAGE_MIGRATIONS.md).
+
 ## Content-script recovery and the scripting permission
 
 The extension requests Firefox's `scripting` permission in addition to the existing HTTP/HTTPS host permissions. It is used only to restore the extension's own packaged content-script bundle in the currently inspected HTTP/HTTPS tab when that tab no longer has a live Inspector content-script connection, for example after the extension itself is reloaded or updated while the page remains open.
