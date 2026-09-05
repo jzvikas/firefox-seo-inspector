@@ -18,6 +18,9 @@ All notable changes to this project are documented here.
 - Pure robots.txt and sitemap XML parsers with automated tests for wildcard/end-anchor rules, user-agent precedence, Allow/Disallow precedence, XML entities, CDATA, sitemap indexes, and URL membership.
 - Desktop/mobile SERP preview with local title/description pixel-width estimates, line-capacity diagnostics, truncation warnings, and decoded URL breadcrumb presentation.
 - Automated tests for SERP width estimation, missing metadata, truncation detection, device profiles, and URL presentation.
+- Dedicated Hreflang panel with local tag validation, self-reference and `x-default` checks, duplicate detection, and normalized language/region/script handling.
+- Bounded on-demand hreflang target validation for HTTP status, redirects, reciprocal references, `noindex`, canonical mismatches, and target-level diagnostics.
+- Local HTML head-signal parser for canonical, hreflang, and robots metadata, with automated parser and hreflang validation tests.
 
 ## [0.1.0] - 2026-09-05
 
