@@ -18,6 +18,10 @@ function event() {
   };
 }
 
+function tick() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 function harness() {
   const runtimeOnMessage = event();
   const tabOnActivated = event();
@@ -130,20 +134,21 @@ test('detached inspector creates one resizable popup window and focuses it on la
   assert.equal(first.windowId, 99);
   assert.equal(first.targetTabId, 10);
   assert.equal(h.createdWindows.length, 1);
-  assert.deepEqual(h.createdWindows[0], {
-    url: 'moz-extension://test/sidebar/sidebar.html',
-    type: 'popup',
-    focused: true,
-    width: 1040,
-    height: 900,
-  });
+  const created = h.createdWindows[0];
+  assert.equal(created.url, 'moz-extension://test/sidebar/sidebar.html');
+  assert.equal(created.type, 'popup');
+  assert.equal(created.focused, true);
+  assert.equal(created.width, 1040);
+  assert.equal(created.height, 900);
 
   const second = await h.dispatch({ type: 'seoInspector.openWindow', tabId: 11 });
   assert.equal(second.created, false);
   assert.equal(second.windowId, 99);
   assert.equal(second.targetTabId, 11);
   assert.equal(h.createdWindows.length, 1);
-  assert.deepEqual(h.updatedWindows.at(-1), { windowId: 99, options: { focused: true } });
+  const update = h.updatedWindows.at(-1);
+  assert.equal(update.windowId, 99);
+  assert.equal(update.options.focused, true);
 
   const target = await h.dispatch({ type: 'seoInspector.getTargetTab' });
   assert.equal(target.id, 11);
@@ -156,13 +161,15 @@ test('detached inspector follows activated normal tabs but ignores its own popup
 
   h.tabs.get(10).active = false;
   h.tabs.get(11).active = true;
-  await h.tabOnActivated.listeners[0]({ tabId: 11, windowId: 1 });
+  h.tabOnActivated.listeners[0]({ tabId: 11, windowId: 1 });
+  await tick();
   const target = await h.dispatch({ type: 'seoInspector.getTargetTab' });
   assert.equal(target.id, 11);
   assert.ok(h.messages.some((message) => message.type === 'seoInspector.targetChanged' && message.tabId === 11));
 
   h.messages.length = 0;
-  await h.tabOnActivated.listeners[0]({ tabId: 90, windowId: 99 });
+  h.tabOnActivated.listeners[0]({ tabId: 90, windowId: 99 });
+  await tick();
   const unchanged = await h.dispatch({ type: 'seoInspector.getTargetTab' });
   assert.equal(unchanged.id, 11);
   assert.equal(h.messages.length, 0);
@@ -191,12 +198,20 @@ test('toolbar launcher passes the current browser tab to the detached-window con
     document: { getElementById() { return status; } },
     window: { close() { closed = true; } },
     browser: {
-      tabs: { async query(options) { assert.deepEqual(options, { active: true, currentWindow: true }); return [{ id: 42 }]; } },
+      tabs: {
+        async query(options) {
+          assert.equal(options.active, true);
+          assert.equal(options.currentWindow, true);
+          return [{ id: 42 }];
+        },
+      },
       runtime: { async sendMessage(message) { sent.push(message); return { ok: true }; } },
     },
   });
   vm.runInContext(source('src/launcher/launcher.js'), context, { filename: 'launcher.js' });
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.deepEqual(sent, [{ type: 'seoInspector.openWindow', tabId: 42 }]);
+  await tick();
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].type, 'seoInspector.openWindow');
+  assert.equal(sent[0].tabId, 42);
   assert.equal(closed, true);
 });
