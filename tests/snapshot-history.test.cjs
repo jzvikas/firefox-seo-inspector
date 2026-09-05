@@ -109,6 +109,12 @@ test('import merges by snapshot id instead of duplicating records', () => {
   assert.deepEqual(SnapshotHistory.pageFor(current, 'https://example.com/a').snapshots.map((item) => item.id), ['two', 'one']);
 });
 
+test('unsupported import envelopes are rejected instead of reporting a false success', () => {
+  assert.throws(() => SnapshotHistory.importPayload({ foo: 'bar' }, SnapshotHistory.emptyHistory()), /invalid-import/);
+  assert.throws(() => SnapshotHistory.importPayload({ pages: [] }, SnapshotHistory.emptyHistory()), /invalid-import/);
+  assert.throws(() => SnapshotHistory.importPayload({ format: 'firefox-seo-inspector-snapshots', history: null }, SnapshotHistory.emptyHistory()), /invalid-import/);
+});
+
 test('legacy single-snapshot storage migrates without deleting unrelated keys', () => {
   const legacy = snap('https://example.com/a', '2026-09-01T10:00:00Z', 'Legacy');
   const migrated = SnapshotHistory.migrateLegacy({
