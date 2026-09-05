@@ -7,6 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const MultiTabAudit = require('../src/lib/multi-tab-audit.js');
 const CrawlerLite = require('../src/lib/crawler-lite.js');
+const PageType = require('../src/lib/page-type.js');
 
 function source(name) {
   return fs.readFileSync(path.join(__dirname, '..', 'src', 'sidebar', name), 'utf8');
@@ -16,6 +17,12 @@ function fakeNode() {
   return {
     children: [],
     appendChild(child) { this.children.push(child); return child; },
+    insertBefore(child, before) {
+      const index = this.children.indexOf(before);
+      if (index < 0) this.children.push(child);
+      else this.children.splice(index, 0, child);
+      return child;
+    },
     addEventListener() {},
     setAttribute() {},
     click() {},
@@ -101,6 +108,12 @@ function crawlerVm() {
         robots: [],
         links: resource.url === 'https://example.com/' ? [{ kind: 'http', href: 'https://example.com/b' }] : [],
       },
+      pageType: {
+        primary: resource.url === 'https://example.com/' ? 'homepage' : 'generic',
+        label: resource.url === 'https://example.com/' ? 'Homepage' : 'CMS / generic content',
+        confidence: resource.url === 'https://example.com/' ? 'high' : 'low',
+        traits: { faceted: false, pagination: false },
+      },
       responseMeta: resource.responseMeta,
       evaluation: { score: 100, issues: [], severityCounts: { critical: 0, warning: 0 }, indexability: { verdict: 'Indexable' } },
     }),
@@ -132,6 +145,40 @@ test('page comparison wrapper boots using the sidebar active tab state', () => {
   assert.equal(vm.runInContext('currentActiveTab.id', context), 77);
 });
 
+test('page-type overview wrapper renders confidence traits and evidence without network work', () => {
+  const panel = fakeNode();
+  let baseRenderCalls = 0;
+  const ui = commonUi('overview', panel);
+  const context = vm.createContext(Object.assign({
+    PageType,
+    state: {
+      report: {
+        pageType: {
+          primary: 'category',
+          label: 'Category / listing',
+          confidence: 'high',
+          traits: { faceted: true, pagination: true },
+          evidence: [{ type: 'category', signal: 'schema', weight: 7, detail: 'CollectionPage structured data' }],
+        },
+      },
+    },
+    renderOverview() {
+      baseRenderCalls += 1;
+      panel.appendChild(fakeNode());
+    },
+    addRow(container, label, value) {
+      const row = fakeNode();
+      row.textContent = `${label}: ${value}`;
+      container.appendChild(row);
+    },
+  }, ui));
+  vm.runInContext(source('sidebar-page-type.js'), context, { filename: 'sidebar-page-type.js' });
+  assert.doesNotThrow(() => vm.runInContext('renderOverview()', context));
+  assert.equal(baseRenderCalls, 1);
+  assert.equal(panel.children.length, 2);
+  assert.equal(vm.runInContext('PageType.display(state.report.pageType)', context), 'Category / listing · Faceted / filtered · Pagination');
+});
+
 test('multi-tab sidebar renderer boots without starting a scan', () => {
   const { context, panel } = multiTabVm();
   assert.doesNotThrow(() => vm.runInContext('renderMultiTab()', context));
@@ -139,7 +186,7 @@ test('multi-tab sidebar renderer boots without starting a scan', () => {
   assert.equal(vm.runInContext('multiTabState.running', context), false);
 });
 
-test('multi-tab runtime scans open tabs and annotates duplicate metadata', async () => {
+test('multi-tab runtime scans open tabs and annotates duplicate metadata with page types', async () => {
   const tabs = [
     { id: 11, url: 'https://example.com/a', title: 'A', windowId: 1 },
     { id: 12, url: 'https://example.com/b', title: 'B', windowId: 1 },
@@ -153,6 +200,7 @@ test('multi-tab runtime scans open tabs and annotates duplicate metadata', async
         description: tabId === 11 ? 'Description A' : 'Description B', headings: [{ level: 1, text: 'Shared H1' }],
         canonical: { href: tabId === 11 ? 'https://example.com/a' : 'https://example.com/b' }, robots: [],
       },
+      pageType: { primary: 'product', label: 'Product', confidence: 'high', traits: { faceted: false, pagination: false } },
       responseMeta: { statusCode: 200 },
       evaluation: { score: 100, issues: [], severityCounts: { critical: 0, warning: 0 }, indexability: { verdict: 'Indexable' } },
     }),
@@ -162,6 +210,7 @@ test('multi-tab runtime scans open tabs and annotates duplicate metadata', async
   assert.equal(vm.runInContext('multiTabState.total', context), 2);
   assert.equal(vm.runInContext('multiTabState.processed', context), 2);
   assert.equal(vm.runInContext('multiTabState.rows.length', context), 2);
+  assert.equal(vm.runInContext('multiTabState.rows.every((row) => row.pageType === "Product")', context), true);
   assert.equal(vm.runInContext('multiTabState.duplicates.titles.length', context), 1);
   assert.equal(vm.runInContext('multiTabState.duplicates.h1.length', context), 1);
 });
@@ -173,7 +222,7 @@ test('crawler renderer boots without starting network work', () => {
   assert.equal(vm.runInContext('crawlerState.running', context), false);
 });
 
-test('crawler runtime discovers the next depth and annotates duplicates', async () => {
+test('crawler runtime discovers the next depth annotates duplicates and carries page types', async () => {
   const { context } = crawlerVm();
   vm.runInContext("crawlerState.seedUrl='https://example.com/'; crawlerState.options=CrawlerLite.normalizeOptions({urlLimit:10,depthLimit:1,sameHostnameOnly:true});", context);
   await vm.runInContext('runCrawler()', context);
@@ -181,6 +230,8 @@ test('crawler runtime discovers the next depth and annotates duplicates', async 
   assert.equal(vm.runInContext('crawlerState.processed', context), 2);
   assert.equal(vm.runInContext('crawlerState.rows.length', context), 2);
   assert.equal(vm.runInContext('crawlerState.rows.some((row) => row.depth === 1 && row.url === "https://example.com/b")', context), true);
+  assert.equal(vm.runInContext('crawlerState.rows.some((row) => row.pageType === "Homepage")', context), true);
+  assert.equal(vm.runInContext('crawlerState.rows.some((row) => row.pageType === "CMS / generic content")', context), true);
   assert.equal(vm.runInContext('crawlerState.duplicates.titles.length', context), 1);
   assert.equal(vm.runInContext('crawlerState.duplicates.h1.length', context), 1);
 });
