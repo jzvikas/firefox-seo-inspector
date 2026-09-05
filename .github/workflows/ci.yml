@@ -28,22 +28,7 @@ jobs:
         run: npm run lint
 
       - name: Unit tests
-        id: unit-tests
-        shell: bash
-        run: |
-          set +e
-          npm test 2>&1 | tee unit-test-output.log
-          status=${PIPESTATUS[0]}
-          echo "status=${status}" >> "$GITHUB_OUTPUT"
-          exit "$status"
-
-      - name: Upload failing unit test output
-        if: failure() && steps.unit-tests.outputs.status != '0'
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-output
-          path: unit-test-output.log
-          retention-days: 1
+        run: npm test
 
       - name: Mozilla web-ext lint
         run: npx --yes web-ext@10.6.0 lint --source-dir src
@@ -59,7 +44,7 @@ jobs:
         run: |
           if ! git diff --quiet -- dist/; then
             git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions-bot@users.noreply.github.com'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add dist/
             git commit -m 'chore: rebuild extension'
             git push origin "HEAD:${GITHUB_REF_NAME}"
