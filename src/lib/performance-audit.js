@@ -116,15 +116,16 @@
 
     for (const resource of Array.isArray(resources) ? resources : []) {
       const kind = kinds[resource.kind] ? resource.kind : 'other';
+      const size = positiveNumber(resource.sizeBytes);
       kinds[kind].count += 1;
-      kinds[kind].bytes += positiveNumber(resource.sizeBytes);
-      if (positiveNumber(resource.sizeBytes)) kinds[kind].knownSizeCount += 1;
-      totalBytes += positiveNumber(resource.sizeBytes);
-      if (positiveNumber(resource.sizeBytes)) knownSizeCount += 1;
+      kinds[kind].bytes += size;
+      if (size) kinds[kind].knownSizeCount += 1;
+      totalBytes += size;
+      if (size) knownSizeCount += 1;
       if (resource.thirdParty) {
         thirdParty.count += 1;
-        thirdParty.bytes += positiveNumber(resource.sizeBytes);
-        if (positiveNumber(resource.sizeBytes)) thirdParty.knownSizeCount += 1;
+        thirdParty.bytes += size;
+        if (size) thirdParty.knownSizeCount += 1;
       }
     }
 
@@ -171,6 +172,24 @@
     };
   }
 
+  function navigationResource(entry, pageUrl, timing) {
+    if (!entry || !timing) return null;
+    const bytes = resourceBytes(entry);
+    return {
+      url: normalizeUrl(entry.name || pageUrl || ''),
+      initiatorType: 'navigation',
+      kind: 'document',
+      thirdParty: false,
+      startTime: 0,
+      duration: timing.total,
+      transferSize: bytes.transfer,
+      encodedBodySize: bytes.encoded,
+      decodedBodySize: bytes.decoded,
+      sizeBytes: bytes.best,
+      sizeSource: bytes.source,
+    };
+  }
+
   function domStats(doc) {
     const root = doc && doc.documentElement;
     if (!root) return { nodeCount: 0, maxDepth: 0 };
@@ -193,14 +212,14 @@
 
   function collect(doc, performanceApi, pageUrl) {
     const page = String(pageUrl || '');
-    let resourceEntries = [];
+    let allResourceEntries = [];
     let navigationEntry = null;
 
     if (performanceApi && typeof performanceApi.getEntriesByType === 'function') {
       try {
-        resourceEntries = Array.from(performanceApi.getEntriesByType('resource') || []).slice(0, RESOURCE_LIMIT);
+        allResourceEntries = Array.from(performanceApi.getEntriesByType('resource') || []);
       } catch (_error) {
-        resourceEntries = [];
+        allResourceEntries = [];
       }
       try {
         const navigationEntries = Array.from(performanceApi.getEntriesByType('navigation') || []);
@@ -210,22 +229,13 @@
       }
     }
 
-    const resources = resourceEntries.map((entry) => serializeResource(entry, page));
-    const summary = summarizeResources(resources);
+    const capped = allResourceEntries.length > RESOURCE_LIMIT;
+    const resourceEntries = allResourceEntries.slice(0, RESOURCE_LIMIT);
+    const subresources = resourceEntries.map((entry) => serializeResource(entry, page));
     const navigation = navigationTiming(navigationEntry);
-    if (navigation) {
-      summary.requestCount += 1;
-      const documentBytes = navigation.transferSize || navigation.encodedBodySize || 0;
-      summary.totalBytes += documentBytes;
-      summary.kinds.document.count += 1;
-      summary.kinds.document.bytes += documentBytes;
-      if (documentBytes) {
-        summary.knownSizeCount += 1;
-        summary.kinds.document.knownSizeCount += 1;
-      } else {
-        summary.unknownSizeCount += 1;
-      }
-    }
+    const documentResource = navigationResource(navigationEntry, page, navigation);
+    const resources = documentResource ? [documentResource].concat(subresources) : subresources;
+    const summary = summarizeResources(resources);
 
     const largest = resources
       .filter((item) => item.sizeBytes > 0)
@@ -241,7 +251,7 @@
     return {
       capturedAt: Date.now(),
       resourceLimit: RESOURCE_LIMIT,
-      capped: resourceEntries.length >= RESOURCE_LIMIT,
+      capped,
       dom: domStats(doc),
       navigation,
       summary,
@@ -261,6 +271,7 @@
     serializeResource,
     summarizeResources,
     navigationTiming,
+    navigationResource,
     domStats,
     collect,
   };
