@@ -77,9 +77,20 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Observed font-resource and font-preload matching, including missing `crossorigin` warnings.
 - The hint engine reads only the current DOM and already-collected local Performance API data; it performs no extra network requests.
 
+### JavaScript and CSS audit
+
+- Script inventory with total, external/inline split, async/defer/module/nomodule flags, first-party/third-party classification, timing, and known size.
+- Duplicate external JavaScript URL detection.
+- Third-party scripts grouped by hostname with script count and known bytes.
+- Large JavaScript warnings at 250 KiB or more when Resource Timing exposes a size.
+- External stylesheet inventory plus inline `<style>` count, media/disabled state, origin, timing, and known size.
+- Duplicate stylesheet URL detection and large CSS warnings at 100 KiB or more when size is known.
+- Inline JavaScript/CSS source is not copied into the asset inventory; only metadata and character counts are retained.
+- Asset inventories are capped at 1,000 entries per category and never refetch resources just to obtain size.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestone focuses on JavaScript/CSS resources, third-party grouping, content diagnostics, link-audit improvements, and security headers.
+See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestone focuses on richer third-party resource grouping/classification, content diagnostics, link-audit improvements, and security headers.
 
 ## Install for development
 
@@ -99,7 +110,7 @@ The extension requests access to HTTP and HTTPS pages because its job is to insp
 
 External link, image, canonical, hreflang, and sitemap checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. `robots.txt` discovery is a single size/time-bounded request and is cached briefly.
 
-The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
+The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints and asset inspection. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
 
 **Compare raw HTML** is intentionally different: when explicitly requested, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
 
