@@ -66,9 +66,20 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Bounded Resource Timing table with URL, type, start time, duration, host, and size.
 - Unknown transfer sizes remain explicitly unknown instead of being guessed.
 
+### Web performance hints
+
+- Likely LCP candidate from a clearly labeled initial-viewport heuristic with in-page highlighting.
+- CLS/layout-shift risk hints for rendered images, video, and iframes that do not reserve dimensions/aspect ratio.
+- Missing image-dimension detection.
+- Above-the-fold `loading="lazy"` warnings and large far-below-fold eager-image warnings.
+- Inspection of preload/modulepreload, preconnect, prefetch, and DNS-prefetch links.
+- Conservative render-blocking candidate detection for stylesheets and synchronous head scripts.
+- Observed font-resource and font-preload matching, including missing `crossorigin` warnings.
+- The hint engine reads only the current DOM and already-collected local Performance API data; it performs no extra network requests.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestone focuses on performance/resources, content diagnostics, link-audit improvements, and security headers.
+See [ROADMAP.md](ROADMAP.md) for the planned path from v0.3.0 through v1.0.0. The next milestone focuses on JavaScript/CSS resources, third-party grouping, content diagnostics, link-audit improvements, and security headers.
 
 ## Install for development
 
@@ -88,7 +99,7 @@ The extension requests access to HTTP and HTTPS pages because its job is to insp
 
 External link, image, canonical, hreflang, and sitemap checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. `robots.txt` discovery is a single size/time-bounded request and is cached briefly.
 
-The Performance panel reads the browser's local Navigation Timing and Resource Timing entries. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated.
+The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
 
 **Compare raw HTML** is intentionally different: when explicitly requested, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
 
