@@ -14,10 +14,10 @@ HTTP response metadata for the current browser session is held in Firefox `stora
 
 ## External SEO checks
 
-Link, image, canonical, hreflang, and sitemap checks contact the URLs that must be inspected. These requests:
+Link, image, canonical, hreflang, sitemap, and explicit URL-to-URL comparison checks contact the URLs that must be inspected. These requests:
 
-- are initiated only when the relevant check is requested;
-- omit credentials;
+- are initiated only when the relevant check is requested, except the documented automatic single `robots.txt` discovery for the active page;
+- omit credentials for unrelated/external target checks;
 - omit the referrer;
 - follow redirects where the check needs the final destination;
 - use per-request timeouts;
@@ -47,6 +47,14 @@ Sitemap checks fetch and parse sitemap XML locally. Sitemap traversal is bounded
 
 `robots.txt` discovery is automatic for the active page. It is a single credential-free request with a response-size limit, request timeout, and short-lived in-memory cache. Sitemap declarations found in robots.txt remain local unless the user starts a sitemap membership scan.
 
+## Page comparison
+
+**Current tab vs another open tab** uses the extension's already-injected content script to analyze the rendered DOM in the selected open HTTP/HTTPS tab. It does not issue an additional page request solely for that comparison.
+
+**URL A vs URL B** is an explicit on-demand raw-HTML comparison. Each URL is fetched with credentials omitted and no referrer, with redirects followed, a 12-second request timeout, and a 2 MiB HTML response limit per URL. Non-HTML responses are rejected. HTML error responses such as 404 or 500 pages may still be analyzed so their actual SEO state can be compared. Returned HTML is parsed locally and fetched page scripts are not executed by the comparison parser.
+
+Page comparison results are kept in the sidebar's in-memory state; they are not uploaded or sent to the extension author.
+
 ## Raw HTML comparison
 
-**Compare raw HTML** is an explicit exception to the credential-free external-check policy. It performs a GET of the current page using the current page's browser credentials so authenticated source is comparable with the rendered page. It does not fetch an unrelated target, runs only when the user asks for the comparison, and the returned HTML remains local to the browser extension.
+**Compare raw HTML** is a separate explicit exception to the credential-free external-check policy. It performs a GET of the current page using the current page's browser credentials so authenticated source is comparable with the rendered page. It does not fetch an unrelated target, runs only when the user asks for the comparison, and the returned HTML remains local to the browser extension.
