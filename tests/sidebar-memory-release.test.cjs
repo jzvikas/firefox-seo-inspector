@@ -67,6 +67,7 @@ test('background operation registries still delete controllers after completion'
 
 test('session-wide link cache remains bounded rather than becoming page-retained state', () => {
   const links = read('src/background/link-background.js');
-  assert.match(links, /CACHE_MAX\s*:\s*1000/);
-  assert.match(links, /linkCache\.delete/);
+  assert.match(links, /LINK_NETWORK_CACHE_MAX\s*=\s*1000/);
+  assert.match(links, /linkNetworkCache\.delete/);
+  assert.match(links, /while \(linkNetworkCache\.size > LINK_NETWORK_CACHE_MAX\)/);
 });
