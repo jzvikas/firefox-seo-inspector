@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Development roadmap from v0.2.0 through v1.0.0 covering indexability diagnostics, performance/security inspection, regression workflows, multi-page auditing, crawler-lite functionality, and platform-neutral e-commerce SEO checks.
+
 ## [0.1.0] - 2026-09-05
 
 ### Added
