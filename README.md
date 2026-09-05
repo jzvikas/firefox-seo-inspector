@@ -146,9 +146,20 @@ Firefox SEO Inspector is a local-first technical SEO sidebar for Firefox. It is 
 - Existing version-1 snapshots remain comparable for their older metadata/count fields. Missing version-2 performance/security/network fields are skipped instead of generating false regressions.
 - Heading and hreflang snapshot inventories are bounded before local storage, while snapshot history keeps the existing 50-record-per-URL limit.
 
+### Page comparison
+
+- **Current tab vs another open tab** compares the current rendered audit against another open HTTP/HTTPS tab using that tab's existing content script, without an additional page fetch.
+- **URL A vs URL B** performs an explicit raw-HTML comparison with credentials omitted, no referrer, redirects followed, a 12-second timeout, and a 2 MiB HTML limit per URL.
+- URL comparison retains HTML 4xx/5xx responses so real error-page metadata, indexability, headings, schema, headers, and issues can be compared instead of being reduced to a generic fetch error.
+- Side-by-side rows cover metadata, HTTP status, SEO score, robots/indexability, heading count/H1/outline, link totals/rel states/targets, images, schema, hreflang, SEO/security response headers, and issue counts/IDs.
+- **Diff only** is enabled by default and can be toggled off to inspect equal rows too.
+- Detail inventories are capped at 80 entries with individual text capped at 160 characters so very large pages do not flood or freeze the sidebar.
+- Raw URL HTML is parsed locally with the fetched page's final URL as the document base. The parser does not execute scripts from fetched comparison pages.
+- Tab-comparison results are cleared when the current tab or its URL changes, preventing a stale comparison from surviving normal or SPA navigation.
+
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is page/tab comparison workflows, followed by local custom rules and personal audit configuration.
+See [ROADMAP.md](ROADMAP.md) for the planned path through v1.0.0. The next Top-15 milestone is local custom rules and personal audit configuration.
 
 ## Install for development
 
@@ -166,7 +177,7 @@ A prebuilt unsigned package is also kept in `dist/`. Stable Firefox generally re
 
 The extension requests access to HTTP and HTTPS pages because its job is to inspect the active page and, only when required by a feature, check related URLs. The `webRequest` permission is used read-only to capture SEO-relevant response metadata, redirect hops, and selected main-document security response headers.
 
-External link, image, canonical, hreflang, and sitemap checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. The link checker also maintains a bounded in-memory session cache for successful results; explicit re-checks bypass it. `robots.txt` discovery is a single size/time-bounded request and is cached briefly.
+External link, image, canonical, hreflang, sitemap, and explicit URL-to-URL comparison checks are bounded and use credential-free requests without a referrer. Fan-out scans provide cancellation and total scan timeouts. The link checker also maintains a bounded in-memory session cache for successful results; explicit re-checks bypass it. `robots.txt` discovery is a single size/time-bounded request and is cached briefly. URL A/B comparison is not a crawler: it fetches only the two user-entered HTTP/HTTPS documents, with a 2 MiB limit and 12-second timeout per document.
 
 The Performance panel reads the browser's local Navigation Timing and Resource Timing entries plus current DOM geometry/markup for performance hints, asset inspection, and third-party grouping. It does not make additional network requests. Browser privacy/caching rules can hide transfer sizes for some resources; those values remain marked unknown rather than being estimated. Third-party service categories are local heuristics rather than network lookups. LCP and render-blocking entries in this panel are explicitly presented as local heuristics/candidates rather than measured Core Web Vitals claims.
 
@@ -176,7 +187,7 @@ The Security panel reads current-page DOM/resource references plus selected secu
 
 Snapshot history and regression summaries are stored only in `browser.storage.local`. The history is capped at 50 records per exact normalized URL. Regression snapshots store bounded summaries rather than full performance/resource inventories, and on-demand network status counts are included only when those checks actually ran. No snapshot or regression data is sent anywhere by the extension.
 
-**Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. See [PRIVACY.md](PRIVACY.md).
+**Compare raw HTML** is intentionally different: when explicitly requested from Compare or Content, it fetches only the current page using that page's browser credentials so authenticated source remains comparable with the rendered DOM. The result remains local. **URL A vs URL B** is a separate credential-free comparison and never uses page credentials. See [PRIVACY.md](PRIVACY.md).
 
 ## Development
 
