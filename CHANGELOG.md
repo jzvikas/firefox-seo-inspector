@@ -6,7 +6,12 @@ All notable changes to this project are documented here.
 
 ### Added
 
-- Toolbar activation now opens Firefox SEO Inspector in a separate movable and resizable browser window instead of shrinking the inspected page with a sidebar. Reopening the toolbar action focuses the existing Inspector window rather than creating duplicates, and the detached window follows the active normal browser tab while ignoring its own extension tab.
+- Dedicated **Product** panel with platform-neutral Product/ProductGroup structured-data quality, commerce-field completeness, canonical/variant diagnostics, BreadcrumbList checks, and availability handling hints.
+- Product field inspection for name, image, SKU, GTIN, brand, Offer/AggregateOffer price and currency, availability, aggregate rating, and review signals, while keeping optional identifiers/reviews informational when absence alone is not an error.
+- Product canonical diagnostics for missing/multiple/cross-origin/unexpected canonicals, generic variant-like URL parameters, base-product canonical strategies, and ProductGroup pages canonicalizing to one nested Product variant.
+- Out-of-stock/discontinued handling hints plus an explicit warning for out-of-stock products that are also `noindex`, without forcing one stock-retirement policy.
+- Product audits are included in rendered, authenticated raw-source, explicit URL comparison, and Crawler fetched-page reports without additional network requests or browser permissions; automated model, dependency, and sidebar runtime coverage is included.
+- Toolbar activation now opens SEO Inspector in a separate movable and resizable browser window instead of shrinking the inspected page with a sidebar. Reopening the toolbar action focuses the existing Inspector window rather than creating duplicates, and the detached window follows the active normal browser tab while ignoring its own extension tab.
 - Generated release artifacts now use the neutral `seo-inspector-<version>.xpi` / `.xpi.sha256` filenames; older `firefox-seo-inspector-*` build artifacts are removed automatically during deterministic builds.
 - Platform-neutral local page-type detection for Homepage, Product, Category/listing, Article/blog, Search results, CMS/generic content, and 404/error pages, with independent Faceted/filter and Pagination traits.
 - Explainable page-type confidence and bounded evidence based on already-available HTTP status, URL shape, JSON-LD/Open Graph/microdata, semantic article/search controls, and pagination signals; detection itself performs no network request.
