@@ -41,6 +41,12 @@ All notable changes to this project are documented here.
 - Automatic migration of legacy single `snapshot:<URL>` records into the new history format after the new history has been written successfully.
 - Snapshot imports use a 5 MiB file-size limit, validate the import envelope, merge by snapshot ID, and keep all data in Firefox local extension storage.
 - Automated tests for snapshot history ordering/caps, baseline behavior, import/export merging, malformed import rejection, and legacy migration.
+- Version-2 regression snapshots with bounded summaries for metadata, indexability, heading structure, links, images, schema, hreflang, HTTP metadata, performance, and security while keeping version-1 snapshot comparisons compatible.
+- Regression classification in the Compare panel with separate regression, improvement, and neutral-change counts plus before/after values and audit categories.
+- Regression rules for newly blocked/noindex pages, HTTP errors, broken checked links/images, invalid JSON-LD, image SEO issues, security-header weakening, mixed content, schema/hreflang/heading changes, and SEO score movement.
+- Performance regression detection for request count, known bytes, third-party load, DOM size/depth, TTFB, and navigation duration using both absolute and relative thresholds to suppress normal measurement noise.
+- On-demand link/image failure counts are compared only when both snapshots contain results from the corresponding network check, preventing missing checks from becoming false zero-error baselines.
+- Automated regression tests covering snapshot-v2 capture, noindex/indexability changes, checked-network gating, image/schema/HTTP/security regressions, performance noise thresholds, improvements, direction summaries, and version-1 compatibility.
 
 ## [0.2.0] - 2026-09-05
 

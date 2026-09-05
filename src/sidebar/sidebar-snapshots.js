@@ -7,6 +7,7 @@ const snapshotUiState = {
   history: SnapshotHistory.emptyHistory(),
   activeUrl: '',
   comparedId: null,
+  regression: null,
   message: '',
   messageKind: '',
 };
@@ -20,6 +21,7 @@ function syncSnapshotUrlState() {
   if (snapshotUiState.activeUrl === url) return;
   snapshotUiState.activeUrl = url;
   snapshotUiState.comparedId = null;
+  snapshotUiState.regression = null;
   snapshotUiState.message = '';
   snapshotUiState.messageKind = '';
   state.snapshotDiff = undefined;
@@ -68,10 +70,28 @@ function currentSnapshotPage() {
   return SnapshotHistory.pageFor(snapshotUiState.history, snapshotCurrentUrl());
 }
 
+function currentRegressionSnapshot() {
+  if (!state.report) return null;
+  const imageNetworkResults = imageNetworkState.response && Array.isArray(imageNetworkState.response.results)
+    ? imageNetworkState.response.results
+    : [];
+  return Regression.makeSnapshot(state.report, {
+    linkResults: Array.from(state.linkResults.values()),
+    imageNetworkResults,
+  });
+}
+
+function applySnapshotComparison(record) {
+  if (!record || !state.report) return;
+  const current = currentRegressionSnapshot();
+  snapshotUiState.comparedId = record.id;
+  snapshotUiState.regression = Regression.analyze(record.snapshot, current);
+  state.snapshotDiff = snapshotUiState.regression.changes;
+}
+
 function compareSnapshotRecord(record) {
   if (!record || !state.report) return;
-  snapshotUiState.comparedId = record.id;
-  state.snapshotDiff = SeoCore.diffSnapshots(record.snapshot, SeoCore.makeSnapshot(state.report));
+  applySnapshotComparison(record);
   snapshotSetMessage(`Comparing current page with “${record.name}”.`, 'ok');
   renderCompare();
 }
@@ -80,7 +100,7 @@ async function saveSnapshot(name) {
   if (!state.report) return;
   const url = snapshotCurrentUrl();
   if (!url) return;
-  const snapshot = SeoCore.makeSnapshot(state.report);
+  const snapshot = currentRegressionSnapshot();
   const added = SnapshotHistory.addSnapshot(snapshotUiState.history, url, snapshot, {
     id: snapshotRecordId(),
     name,
@@ -88,8 +108,7 @@ async function saveSnapshot(name) {
   });
   snapshotUiState.history = added.history;
   await persistSnapshotHistory();
-  snapshotUiState.comparedId = added.record.id;
-  state.snapshotDiff = SeoCore.diffSnapshots(added.record.snapshot, SeoCore.makeSnapshot(state.report));
+  applySnapshotComparison(added.record);
   snapshotSetMessage(`Saved “${added.record.name}”.`, 'ok');
   renderCompare();
 }
@@ -112,6 +131,7 @@ async function deleteSnapshotRecord(id) {
   await persistSnapshotHistory();
   if (snapshotUiState.comparedId === id) {
     snapshotUiState.comparedId = null;
+    snapshotUiState.regression = null;
     state.snapshotDiff = undefined;
   }
   snapshotSetMessage(`Deleted “${record.name}”.`, 'ok');
@@ -139,8 +159,8 @@ async function importSnapshotHistoryFile(file) {
     return;
   }
   try {
-    const text = await file.text();
-    const parsed = JSON.parse(text);
+    const textValue = await file.text();
+    const parsed = JSON.parse(textValue);
     snapshotUiState.history = SnapshotHistory.importPayload(parsed, snapshotUiState.history);
     await persistSnapshotHistory();
     snapshotSetMessage('Snapshot history imported and merged by snapshot ID.', 'ok');
@@ -213,6 +233,7 @@ function appendSnapshotControls(panel) {
 
   saveCard.appendChild(controls);
   saveCard.appendChild(el('div', 'muted', `Local-only history · max ${SnapshotHistory.MAX_SNAPSHOTS_PER_URL} snapshots per exact normalized URL · imports merge by snapshot ID.`));
+  saveCard.appendChild(el('div', 'muted', 'Regression snapshots include SEO, indexability, headings, schema, hreflang, HTTP, performance, and security summaries. Broken-link/image network counts are recorded only when those on-demand checks have actually run.'));
   panel.appendChild(saveCard);
 }
 
@@ -280,13 +301,34 @@ function appendSnapshotTable(panel) {
   panel.appendChild(cardNode);
 }
 
+function snapshotDirectionKind(change) {
+  if (change.direction === 'regression') return change.severity === 'critical' ? 'critical' : 'warning';
+  return 'info';
+}
+
 function appendSnapshotDiff(panel) {
   const cardNode = el('div', 'card');
-  cardNode.appendChild(el('div', 'card-header', 'Snapshot diff'));
+  cardNode.appendChild(el('div', 'card-header', 'Regression diff'));
   if (state.snapshotDiff === null) cardNode.appendChild(el('div', 'empty', 'Selected snapshot is unavailable.'));
   else if (Array.isArray(state.snapshotDiff) && !state.snapshotDiff.length) cardNode.appendChild(el('div', 'empty', 'No differences from the compared snapshot.'));
   else if (Array.isArray(state.snapshotDiff)) {
-    state.snapshotDiff.forEach((change) => addRow(cardNode, change.field, `${valueText(change.before)}  →  ${valueText(change.after)}`));
+    const regression = snapshotUiState.regression || { summary: { regressions: 0, improvements: 0, changed: state.snapshotDiff.length } };
+    const summary = el('div', 'toolbar');
+    summary.appendChild(badge(`${regression.summary.regressions} regressions`, regression.summary.regressions ? 'critical' : 'ok'));
+    summary.appendChild(badge(`${regression.summary.improvements} improvements`, 'ok'));
+    summary.appendChild(badge(`${regression.summary.changed} other changes`, regression.summary.changed ? 'warning' : 'ok'));
+    cardNode.appendChild(summary);
+
+    state.snapshotDiff.forEach((item) => {
+      const node = el('div', `issue ${snapshotDirectionKind(item)}`);
+      const title = el('div', 'issue-title');
+      title.appendChild(el('span', '', item.label || item.field));
+      title.appendChild(badge(item.direction || 'changed', snapshotDirectionKind(item)));
+      node.appendChild(title);
+      node.appendChild(el('div', 'issue-message', `${valueText(item.before)}  →  ${valueText(item.after)}`));
+      if (item.category) node.appendChild(el('div', 'muted', item.category));
+      cardNode.appendChild(node);
+    });
   } else cardNode.appendChild(el('div', 'empty', 'Choose a saved snapshot or baseline to compare with the current page.'));
   panel.appendChild(cardNode);
 }
@@ -310,7 +352,7 @@ function appendRawCompare(panel) {
   rawCard.appendChild(rawButton);
   if (state.rawDiff === null) rawCard.appendChild(el('div', 'empty', 'Raw fetch failed or has not been run.'));
   else if (Array.isArray(state.rawDiff) && !state.rawDiff.length) rawCard.appendChild(el('div', 'empty', 'No differences in the compared SEO fields.'));
-  else if (state.rawDiff) state.rawDiff.forEach((change) => addRow(rawCard, change.field, `Rendered: ${valueText(change.rendered)} | Raw: ${valueText(change.raw)}`));
+  else if (state.rawDiff) state.rawDiff.forEach((item) => addRow(rawCard, item.field, `Rendered: ${valueText(item.rendered)} | Raw: ${valueText(item.raw)}`));
   else rawCard.appendChild(el('div', 'empty', 'Run raw HTML comparison when needed.'));
   panel.appendChild(rawCard);
 }

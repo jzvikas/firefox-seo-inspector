@@ -176,18 +176,18 @@ Goal: make the extension useful after deployments and repeated audits.
 
 ### Regression detection
 
-- [ ] Title changes.
-- [ ] Description changes.
-- [ ] Canonical changes.
-- [ ] Robots/indexability changes.
-- [ ] H1 and heading-structure changes.
-- [ ] Link count and broken-link changes.
-- [ ] Image issue changes.
-- [ ] Schema changes.
-- [ ] Hreflang changes.
-- [ ] HTTP status/header changes.
-- [ ] Performance regressions.
-- [ ] Security-header regressions.
+- [x] Title changes.
+- [x] Description changes.
+- [x] Canonical changes.
+- [x] Robots/indexability changes.
+- [x] H1 and heading-structure changes.
+- [x] Link count and broken-link changes.
+- [x] Image issue changes.
+- [x] Schema changes.
+- [x] Hreflang changes.
+- [x] HTTP status/header changes.
+- [x] Performance regressions.
+- [x] Security-header regressions.
 
 ### Compare pages
 
@@ -241,7 +241,7 @@ Goal: make the extension useful after deployments and repeated audits.
 
 ### v0.4.0 done when
 
-- [ ] A before/after deployment audit can be completed from saved local snapshots.
+- [x] A before/after deployment audit can be completed from saved local snapshots.
 - [ ] Repeated personal checks can be customized without modifying source code.
 - [ ] Custom configuration remains local and public-repository-safe.
 
