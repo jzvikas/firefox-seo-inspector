@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Firefox SEO Inspector",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A local-first technical SEO inspector for Firefox with page audits, highlighting, link checks, structured data inspection, and snapshot comparison.",
   "icons": {
     "48": "icons/icon.svg",
