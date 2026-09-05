@@ -191,10 +191,10 @@ Goal: make the extension useful after deployments and repeated audits.
 
 ### Compare pages
 
-- [ ] Current tab vs another tab.
-- [ ] URL A vs URL B.
-- [ ] Side-by-side metadata, headings, links, images, schema, headers, and issues.
-- [ ] Diff-only view.
+- [x] Current tab vs another tab.
+- [x] URL A vs URL B.
+- [x] Side-by-side metadata, headings, links, images, schema, headers, and issues.
+- [x] Diff-only view.
 
 ### Custom rules
 
