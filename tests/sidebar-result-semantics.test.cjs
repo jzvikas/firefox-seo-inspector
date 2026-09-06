@@ -17,22 +17,22 @@ test('sidebar loads the local result-semantics assets', () => {
 });
 
 test('result semantics distinguish observations, rule warnings, and recommendations', () => {
-  assert.match(js, /data\.resultKind|dataset\.resultKind/);
+  assert.match(js, /dataset\.resultKind/);
   assert.match(js, /'fact'/);
   assert.match(js, /'warning'/);
   assert.match(js, /'recommendation'/);
   assert.match(js, /Critical rule failure/);
   assert.match(js, /Rule warning/);
-  assert.match(js, /Observed page facts/);
+  assert.match(js, /Observed/);
   assert.match(js, /Recommendation/);
+  assert.match(js, /result-kind-label/);
+  assert.match(js, /setAttribute\('role', 'group'\)/);
+  assert.match(js, /setAttribute\('aria-label', labelText\)/);
 });
 
-test('semantic result kinds have visible labels without relying on color alone', () => {
-  assert.match(css, /data-result-kind="fact"/);
-  assert.match(css, /content:\s*"Observed"/);
+test('semantic result kinds have visible text labels without relying on color alone', () => {
+  assert.match(css, /\.result-kind-label/);
   assert.match(css, /data-result-kind="recommendation"/);
-  assert.match(css, /content:\s*"Recommendation"/);
-  assert.match(css, /data-result-kind="warning"/);
-  assert.match(css, /content:\s*"Rule warning"/);
-  assert.match(css, /content:\s*"Critical rule failure"/);
+  assert.match(css, /\.issue > \.result-kind-label/);
+  assert.doesNotMatch(css, /content:\s*["']/);
 });
