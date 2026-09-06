@@ -20,7 +20,7 @@
   }
 
   async function readTheme(storage) {
-    const area = storage || (browser && browser.storage && browser.storage.local);
+    const area = storage || (typeof browser !== 'undefined' && browser.storage && browser.storage.local);
     if (!area || typeof area.get !== 'function') return 'system';
     try {
       const result = await area.get(STORAGE_KEY);
@@ -32,7 +32,7 @@
 
   async function writeTheme(value, storage) {
     const theme = normalizeTheme(value);
-    const area = storage || (browser && browser.storage && browser.storage.local);
+    const area = storage || (typeof browser !== 'undefined' && browser.storage && browser.storage.local);
     if (!area || typeof area.set !== 'function') return theme;
     await area.set({ [STORAGE_KEY]: theme });
     return theme;
@@ -42,7 +42,7 @@
     const opts = options || {};
     const select = opts.select || document.getElementById('themeSelect');
     const root = opts.root || document.documentElement;
-    const storage = opts.storage || (browser && browser.storage && browser.storage.local);
+    const storage = opts.storage || (typeof browser !== 'undefined' && browser.storage && browser.storage.local);
     const theme = applyTheme(await readTheme(storage), root);
     if (!select) return theme;
 
@@ -57,4 +57,10 @@
   const api = { STORAGE_KEY, normalizeTheme, applyTheme, readTheme, writeTheme, initTheme };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof globalThis !== 'undefined') globalThis.SidebarTheme = api;
+
+  if (typeof document !== 'undefined') {
+    const start = () => initTheme().catch(() => {});
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+    else start();
+  }
 })();
