@@ -32,9 +32,21 @@ Run Mozilla's validator against the release source/package using the same `web-e
 
 If Mozilla changes validator behavior and a new diagnostic appears, investigate it rather than suppressing or ignoring it by default.
 
+## Exact release-candidate evidence
+
+After `npm run check` has built and verified the candidate XPI from a clean working tree, run:
+
+```bash
+npm run release:evidence
+```
+
+This writes `dist/release-signoff-<version>.md`. The generated record binds the manual sign-off to the full Git commit SHA, exact XPI filename, and SHA-256 digest. The command refuses a dirty working tree, version mismatch, missing artifact/checksum, or checksum mismatch.
+
+Do not commit the generated sign-off file as source. Complete it alongside the exact candidate artifact. Any source or artifact change invalidates that sign-off and requires a rebuild plus all affected automated/manual checks.
+
 ## Manual Firefox smoke test
 
-Complete [FIREFOX_SMOKE_TEST.md](FIREFOX_SMOKE_TEST.md) against the exact commit or tag that will be released.
+Complete [FIREFOX_SMOKE_TEST.md](FIREFOX_SMOKE_TEST.md) against the exact commit or tag that will be released, using the generated release-candidate sign-off record to preserve candidate identity.
 
 Record at minimum:
 
