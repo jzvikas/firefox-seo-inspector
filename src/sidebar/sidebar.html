@@ -16,7 +16,17 @@
       <strong>SEO Inspector</strong>
       <div id="pageUrl" class="muted url" title=""></div>
     </div>
-    <button id="refreshButton" class="icon-button" type="button" title="Refresh audit" aria-label="Refresh audit">↻</button>
+    <div class="topbar-actions">
+      <label class="theme-control" for="themeSelect">
+        <span class="visually-hidden">Theme</span>
+        <select id="themeSelect" aria-label="Theme">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </label>
+      <button id="refreshButton" class="icon-button" type="button" title="Refresh audit" aria-label="Refresh audit">↻</button>
+    </div>
   </header>
 
   <section id="statusPanel" class="status-panel">
@@ -106,6 +116,7 @@
   <script src="sidebar-storage.js"></script>
   <script src="sidebar-detached-target.js"></script>
   <script src="sidebar-runtime-recovery.js"></script>
+  <script src="sidebar-theme.js"></script>
   <script src="sidebar-page-type.js"></script>
   <script src="sidebar-product.js"></script>
   <script src="sidebar-category.js"></script>
@@ -133,5 +144,6 @@
   <script src="sidebar-crawler.js"></script>
   <script src="sidebar-pagination-diagnostics.js"></script>
   <script src="sidebar-main.js"></script>
+  <script>SidebarTheme.initTheme().catch(() => {});</script>
 </body>
 </html>
