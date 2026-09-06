@@ -24,7 +24,7 @@ function extractCodeField(text, label) {
 }
 
 function extractPlainField(text, label) {
-  const match = text.match(new RegExp(`^- ${escapeRegExp(label)}:\\s*(.+)$`, 'm'));
+  const match = text.match(new RegExp(`^- ${escapeRegExp(label)}:[ \\t]*([^\\r\\n]+)$`, 'm'));
   return match?.[1]?.trim() || '';
 }
 
