@@ -6,6 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'sidebar', 'sidebar-runtime-recovery.js'), 'utf8');
+const styles = fs.readFileSync(path.join(__dirname, '..', 'src', 'sidebar', 'sidebar.css'), 'utf8');
 
 test('sidebar defines a normalized five-state UI model', () => {
   for (const state of ['empty', 'loading', 'error', 'disabled', 'complete']) {
@@ -31,4 +32,11 @@ test('panel state stays synchronized after asynchronous renders', () => {
 
 test('generic retry controls receive a stable accessible label', () => {
   assert.match(source, /Retry this inspection/);
+});
+
+test('non-complete sidebar states have explicit visual treatments', () => {
+  assert.match(styles, /\.panel\[data-ui-state="loading"\]/);
+  assert.match(styles, /\.panel\[data-ui-state="error"\]/);
+  assert.match(styles, /\.panel\[data-ui-state="disabled"\]/);
+  assert.match(styles, /\.panel\[data-ui-state="empty"\]/);
 });

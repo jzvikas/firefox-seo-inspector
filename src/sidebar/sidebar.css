@@ -42,6 +42,13 @@ button { cursor: pointer; }
 
 .panel { display: none; padding: 12px; }
 .panel.active { display: block; }
+.panel[data-ui-state="loading"] { cursor: progress; }
+.panel[data-ui-state="loading"] .card,
+.panel[data-ui-state="loading"] .table-wrap { opacity: .72; }
+.panel[data-ui-state="error"] > .empty,
+.panel[data-ui-state="error"] > .issue:first-child { border-left: 4px solid var(--critical); }
+.panel[data-ui-state="disabled"] > .empty { border: 1px dashed var(--border); border-radius: 8px; }
+.panel[data-ui-state="empty"] > .empty { min-height: 52px; display: grid; place-items: center; }
 
 .card { border: 1px solid var(--border); border-radius: 9px; margin-bottom: 10px; overflow: hidden; }
 .card-header { padding: 8px 10px; font-weight: 650; background: var(--panel); border-bottom: 1px solid var(--border); }
