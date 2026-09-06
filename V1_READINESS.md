@@ -9,6 +9,7 @@ The following controls are already implemented on `main` and should remain green
 - **Firefox-first, local/private runtime** — no telemetry, analytics, accounts, backend service, remote runtime scripts, or browsing-data upload are part of the product model.
 - **Audited manifest permissions** — CI allowlists `scripting`, `storage`, `tabs`, and `webRequest`, limits host access to HTTP/HTTPS, rejects optional permissions and `externally_connectable`, and keeps the restrictive extension CSP/data-collection declaration.
 - **Public-source privacy scan** — repository CI rejects sensitive/project-specific source patterns.
+- **Final public-source review** — `RELEASE_SOURCE_REVIEW.md` records the repository-level v1 source/privacy review and its PASS result; any later source changes must be re-reviewed before release.
 - **Release/version consistency** — package, Firefox manifest, README current-release value, and CHANGELOG release headings are checked together.
 - **Automated test suite** — unit/runtime regression tests run in CI.
 - **Direct audit coverage gate** — CI discovers audit-rule modules and requires direct automated coverage, including canonical/redirect, indexability, robots/sitemap, network parser, page-comparison, cancellation, and timeout paths.
@@ -32,8 +33,7 @@ These items should stay open until they are completed or explicitly signed off w
 1. **Responsive sidebar sign-off** — verify narrow and wide Firefox sidebar layouts manually after the current theme/navigation work, including overflow and focus visibility.
 2. **Unhandled runtime error sign-off** — automated error boundaries exist, but the v1 candidate must complete the Browser Console portion of `FIREFOX_SMOKE_TEST.md` without uncaught extension errors or unhandled promise rejections in normal workflows.
 3. **Manual release candidate smoke test** — run the documented Firefox smoke checklist against the exact release-candidate commit/XPI and record Firefox version, OS, commit/tag, checksum, automated gate result, and accepted limitations.
-4. **Final public-source review** — perform the release-candidate privacy/source review and confirm no private domains, customer identifiers, credentials, local paths, or project-specific rules are present.
-5. **Final roadmap/version alignment** — after the exact release candidate passes all manual gates, update v1 roadmap completion state and promote package/manifest/changelog/README to `1.0.0` in the release-order defined by `RELEASE.md`.
+4. **Final roadmap/version alignment** — after the exact release candidate passes all manual gates, update v1 roadmap completion state and promote package/manifest/changelog/README to `1.0.0` in the release-order defined by `RELEASE.md`.
 
 ## Release decision rule
 
