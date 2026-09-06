@@ -5,10 +5,26 @@
 
   const ADVISORY_PATTERN = /\b(actionable|advisory|hint|recommendation|opportunit(?:y|ies))\b/i;
 
-  function setKind(node, kind, label) {
+  function resultLabel(text) {
+    const label = document.createElement('span');
+    label.className = 'result-kind-label';
+    label.textContent = text;
+    return label;
+  }
+
+  function setKind(node, kind, labelText) {
     if (!node || node.dataset.resultKind) return;
     node.dataset.resultKind = kind;
-    node.setAttribute('aria-label', `${label}: ${node.getAttribute('aria-label') || node.textContent || ''}`.trim());
+    node.setAttribute('role', 'group');
+    node.setAttribute('aria-label', labelText);
+
+    if (node.classList.contains('issue')) {
+      node.insertBefore(resultLabel(labelText), node.firstChild);
+      return;
+    }
+
+    const header = node.querySelector(':scope > .card-header');
+    if (header && !header.querySelector('.result-kind-label')) header.appendChild(resultLabel(labelText));
   }
 
   function classifyIssue(node) {
@@ -24,7 +40,7 @@
       setKind(node, 'recommendation', 'Recommendation');
       return;
     }
-    setKind(node, 'fact', 'Observed page facts');
+    setKind(node, 'fact', 'Observed');
   }
 
   function annotate(root) {
