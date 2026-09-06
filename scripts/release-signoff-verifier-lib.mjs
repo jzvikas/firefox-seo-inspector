@@ -16,8 +16,11 @@ function escapeRegExp(value) {
 }
 
 function extractCodeField(text, label) {
-  const match = text.match(new RegExp(`^- ${escapeRegExp(label)}: \\`([^\\`]+)\\`$`, 'm'));
-  return match?.[1]?.trim() || '';
+  const prefix = `- ${label}: `;
+  const line = text.split(/\r?\n/).find((candidate) => candidate.startsWith(prefix));
+  if (!line) return '';
+  const value = line.slice(prefix.length).trim();
+  return value.startsWith('`') && value.endsWith('`') ? value.slice(1, -1).trim() : '';
 }
 
 function extractPlainField(text, label) {
