@@ -9,6 +9,7 @@ This runbook defines the release procedure for Firefox SEO Inspector. The goal i
 - Ensure the release branch is up to date with `main` and contains no uncommitted changes.
 - Confirm `package.json`, `src/manifest.json`, README release text, and CHANGELOG version metadata agree.
 - Confirm all required v1 roadmap items intended for the release are complete or explicitly documented as accepted limitations.
+- Confirm the repository-level public-source/privacy review in [RELEASE_SOURCE_REVIEW.md](RELEASE_SOURCE_REVIEW.md) is current for the candidate source; re-review any source changes made after that sign-off.
 - Do not add telemetry, analytics, accounts, backend calls, remote runtime scripts, project-specific domains, customer identifiers, credentials, or private configuration.
 - Do not expand Firefox permissions unless the feature cannot be implemented safely without them and the permission change has been reviewed and documented.
 
