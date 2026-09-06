@@ -1,0 +1,33 @@
+.result-kind-label {
+  display: inline-block;
+  margin-left: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.card-header > .result-kind-label { float: right; }
+.card[data-result-kind="recommendation"] > .card-header > .result-kind-label { color: var(--accent); }
+
+.issue > .result-kind-label {
+  margin: 0 0 4px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--warning);
+}
+
+.issue.critical > .result-kind-label { color: var(--critical); }
+
+@media (max-width: 340px) {
+  .card-header > .result-kind-label {
+    float: none;
+    margin-left: 6px;
+  }
+}
