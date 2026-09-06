@@ -16,8 +16,8 @@ test('release evidence binds manual sign-off to exact candidate identity', async
   });
 
   assert.match(markdown, /Version: `1\.0\.0`/);
-  assert.match(markdown, new RegExp(`Commit: \\`${commitSha}\\``));
-  assert.match(markdown, new RegExp(`SHA-256: \\`${sha256}\\``));
+  assert.ok(markdown.includes(`Commit: \`${commitSha}\``));
+  assert.ok(markdown.includes(`SHA-256: \`${sha256}\``));
   assert.match(markdown, /280 \/ 340 \/ 480 \/ 800\+ px/);
   assert.match(markdown, /Browser Console shows no uncaught extension exceptions/);
   assert.match(markdown, /Full `FIREFOX_SMOKE_TEST\.md` checklist completed against this exact XPI/);
