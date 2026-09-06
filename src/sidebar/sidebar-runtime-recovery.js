@@ -201,4 +201,4 @@ const SidebarUiState = (() => {
   return Object.freeze({ STATES, classify, apply, applyAll, start });
 })();
 
-SidebarUiState.start(document);
+if (typeof document !== 'undefined') SidebarUiState.start(document);
