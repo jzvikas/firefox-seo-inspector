@@ -39,5 +39,21 @@ jobs:
       - name: Verify XPI contents and checksum
         run: npm run verify:build
 
-      - name: Verify committed build is current
-        run: git diff --exit-code -- dist/
+      - name: Verify build reproducibility
+        shell: bash
+        run: |
+          cp dist/seo-inspector-*.xpi /tmp/first-build.xpi
+          cp dist/seo-inspector-*.xpi.sha256 /tmp/first-build.xpi.sha256
+          npm run build
+          cmp /tmp/first-build.xpi dist/seo-inspector-*.xpi
+          cmp /tmp/first-build.xpi.sha256 dist/seo-inspector-*.xpi.sha256
+
+      - name: Upload verified XPI
+        uses: actions/upload-artifact@v4
+        with:
+          name: firefox-seo-inspector-xpi
+          path: |
+            dist/seo-inspector-*.xpi
+            dist/seo-inspector-*.xpi.sha256
+          if-no-files-found: error
+          retention-days: 14
