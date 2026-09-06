@@ -1,0 +1,38 @@
+.card[data-result-kind="fact"] > .card-header::after,
+.card[data-result-kind="recommendation"] > .card-header::after {
+  float: right;
+  margin-left: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.card[data-result-kind="fact"] > .card-header::after { content: "Observed"; }
+.card[data-result-kind="recommendation"] > .card-header::after { content: "Recommendation"; color: var(--accent); }
+
+.issue[data-result-kind="warning"]::before {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--warning);
+  content: "Rule warning";
+}
+
+.issue.critical[data-result-kind="warning"]::before {
+  color: var(--critical);
+  content: "Critical rule failure";
+}
+
+@media (max-width: 340px) {
+  .card[data-result-kind] > .card-header::after {
+    float: none;
+    display: inline-block;
+    margin-left: 6px;
+  }
+}
