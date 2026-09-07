@@ -7,6 +7,7 @@ const path = require('node:path');
 const PageType = require('../src/lib/page-type.js');
 const ProductPageAudit = require('../src/lib/product-page-audit.js');
 const CategoryPageAudit = require('../src/lib/category-page-audit.js');
+const PaginationAudit = require('../src/lib/pagination-audit.js');
 
 function withBrokenUrlSearchParamsIterators(callback) {
   const originalEntries = URLSearchParams.prototype.entries;
@@ -25,7 +26,7 @@ function withBrokenUrlSearchParamsIterators(callback) {
   }
 }
 
-test('page, product, and category URL parsing does not depend on iterable URLSearchParams iterators', () => {
+test('URL parsing does not depend on iterable URLSearchParams entries/keys', () => {
   withBrokenUrlSearchParamsIterators(() => {
     const signals = PageType.urlSignals('https://example.test/catalog?q=boots&page=2&filter_brand=acme');
     assert.deepEqual(signals.searchParams, ['q']);
@@ -43,6 +44,25 @@ test('page, product, and category URL parsing does not depend on iterable URLSea
     ]);
     assert.deepEqual(CategoryPageAudit.paginationParam('https://example.test/list?page=3'), { name: 'page', number: 3 });
     assert.equal(CategoryPageAudit.stripPagination('https://example.test/list?page=3&brand=acme'), 'https://example.test/list?brand=acme');
+
+    assert.deepEqual(PaginationAudit.pageSignal('https://example.test/list?page=4&brand=acme'), {
+      detected: true,
+      number: 4,
+      source: 'page',
+      raw: '4',
+    });
+    assert.equal(PaginationAudit.familyKey('https://example.test/list?page=4&brand=acme'), 'https://example.test/list?brand=acme');
+  });
+});
+
+test('pagination preserves first matching query signal without iterator early-return semantics', () => {
+  withBrokenUrlSearchParamsIterators(() => {
+    assert.deepEqual(PaginationAudit.pageSignal('https://example.test/list?page=bad&p=7'), {
+      detected: true,
+      number: null,
+      source: 'page',
+      raw: 'bad',
+    });
   });
 });
 
