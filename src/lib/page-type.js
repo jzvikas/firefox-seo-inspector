@@ -91,15 +91,15 @@
     const searchParams = [];
     const filterParams = [];
     const paginationParams = [];
-    for (const [rawName, rawValue] of url.searchParams.entries()) {
-      const name = rawName.toLowerCase();
+    url.searchParams.forEach((rawValue, rawName) => {
+      const name = String(rawName || '').toLowerCase();
       const valueText = clean(rawValue);
       if (SEARCH_PARAMS.has(name) && valueText) searchParams.push(name);
       if (FILTER_PARAMS.has(name) || name.startsWith('filter_') || name.startsWith('filter[') || name.startsWith('facet_') || name.startsWith('facet[')) {
         filterParams.push(name);
       }
       if (PAGINATION_PARAMS.has(name) && numericParamIsPage(name, rawValue)) paginationParams.push(name);
-    }
+    });
 
     return {
       valid: true,
