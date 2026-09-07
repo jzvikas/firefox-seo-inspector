@@ -57,23 +57,30 @@
     const url = safeUrl(value);
     if (!url) return [];
     const output = [];
-    for (const [name, rawValue] of url.searchParams.entries()) {
-      if (!clean(rawValue)) continue;
+    url.searchParams.forEach((rawValue, rawName) => {
+      if (!clean(rawValue)) return;
+      const name = String(rawName || '');
       output.push({ name, value: clean(rawValue), kind: classifyParam(name) });
-    }
+    });
     return output;
   }
 
   function paginationParam(value) {
     const url = safeUrl(value);
     if (!url) return null;
-    for (const [name, raw] of url.searchParams.entries()) {
-      if (classifyParam(name) !== 'pagination') continue;
+    let found = null;
+    url.searchParams.forEach((raw, rawName) => {
+      if (found || classifyParam(rawName) !== 'pagination') return;
+      const name = String(rawName || '');
       const number = Number.parseInt(String(raw || ''), 10);
       const key = name.toLowerCase();
-      if ((key === 'offset' || key === 'start') && Number.isInteger(number) && number > 0) return { name, number: null };
-      if (Number.isInteger(number) && number >= 1) return { name, number };
-    }
+      if ((key === 'offset' || key === 'start') && Number.isInteger(number) && number > 0) {
+        found = { name, number: null };
+        return;
+      }
+      if (Number.isInteger(number) && number >= 1) found = { name, number };
+    });
+    if (found) return found;
     const pathMatch = url.pathname.match(/(?:^|\/)(?:page|p)\/(\d+)(?:\/|$)/i);
     if (pathMatch) return { name: 'path', number: Number.parseInt(pathMatch[1], 10) || null };
     return null;
@@ -82,7 +89,9 @@
   function stripPagination(value) {
     const url = safeUrl(value);
     if (!url) return '';
-    for (const name of Array.from(url.searchParams.keys())) {
+    const names = [];
+    url.searchParams.forEach((_rawValue, rawName) => names.push(String(rawName)));
+    for (const name of names) {
       if (classifyParam(name) === 'pagination') url.searchParams.delete(name);
     }
     url.pathname = url.pathname.replace(/(?:^|\/)(?:page|p)\/\d+(?=\/|$)/ig, '').replace(/\/+/g, '/');
@@ -92,7 +101,9 @@
   function stripNonContentParams(value) {
     const url = safeUrl(value);
     if (!url) return '';
-    for (const name of Array.from(url.searchParams.keys())) {
+    const names = [];
+    url.searchParams.forEach((_rawValue, rawName) => names.push(String(rawName)));
+    for (const name of names) {
       const kind = classifyParam(name);
       if (kind === 'filter' || kind === 'sort' || kind === 'tracking' || kind === 'session' || kind === 'pagination') url.searchParams.delete(name);
     }

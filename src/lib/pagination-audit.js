@@ -30,16 +30,23 @@
   function pageSignal(value) {
     const url = safeUrl(value);
     if (!url) return { detected: false, number: 1, source: '', raw: '' };
-    for (const [name, raw] of url.searchParams.entries()) {
-      if (!isPageParam(name)) continue;
+    let querySignal = null;
+    url.searchParams.forEach((raw, rawName) => {
+      if (querySignal || !isPageParam(rawName)) return;
+      const name = String(rawName || '');
       const number = Number.parseInt(String(raw || ''), 10);
-      const key = String(name).toLowerCase();
+      const key = name.toLowerCase();
       if ((key === 'offset' || key === 'start') && Number.isInteger(number) && number > 0) {
-        return { detected: true, number: null, source: name, raw: String(raw) };
+        querySignal = { detected: true, number: null, source: name, raw: String(raw) };
+        return;
       }
-      if (Number.isInteger(number) && number >= 1) return { detected: true, number, source: name, raw: String(raw) };
-      return { detected: true, number: null, source: name, raw: String(raw) };
-    }
+      if (Number.isInteger(number) && number >= 1) {
+        querySignal = { detected: true, number, source: name, raw: String(raw) };
+        return;
+      }
+      querySignal = { detected: true, number: null, source: name, raw: String(raw) };
+    });
+    if (querySignal) return querySignal;
     const pathMatch = url.pathname.match(/(?:^|\/)(?:page|p)\/(\d+)(?:\/|$)/i);
     if (pathMatch) {
       return { detected: true, number: Number.parseInt(pathMatch[1], 10) || null, source: 'path', raw: pathMatch[1] };
@@ -50,7 +57,9 @@
   function familyKey(value) {
     const url = safeUrl(value);
     if (!url) return '';
-    for (const name of Array.from(url.searchParams.keys())) {
+    const names = [];
+    url.searchParams.forEach((_rawValue, rawName) => names.push(String(rawName)));
+    for (const name of names) {
       if (isPageParam(name)) url.searchParams.delete(name);
     }
     url.searchParams.sort();
