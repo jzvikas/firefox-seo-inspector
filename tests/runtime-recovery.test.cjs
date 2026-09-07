@@ -27,6 +27,7 @@ function recoveryHarness(options) {
   const tabMessages = [];
   let renderCalls = 0;
   let ensureCalls = 0;
+  let reinjectCalls = 0;
   const defaultReport = opts.report || {
     facts: { url: 'https://example.test/', robots: [] },
     responseMeta: null,
@@ -54,6 +55,12 @@ function recoveryHarness(options) {
         if (typeof opts.ensure === 'function') return opts.ensure(tabId, manifest, ensureCalls);
         if (opts.ensureError) throw opts.ensureError;
         return opts.connection || { ok: true, recovered: false, injected: false };
+      },
+      async reinject(_browser, tabId, manifest) {
+        reinjectCalls += 1;
+        if (typeof opts.reinject === 'function') return opts.reinject(tabId, manifest, reinjectCalls);
+        if (opts.reinjectError) throw opts.reinjectError;
+        return opts.repairConnection || { ok: false, recovered: false, injected: false, code: 'test-repair-unavailable' };
       },
     }),
     state,
@@ -96,6 +103,7 @@ function recoveryHarness(options) {
     tabMessages,
     get renderCalls() { return renderCalls; },
     get ensureCalls() { return ensureCalls; },
+    get reinjectCalls() { return reinjectCalls; },
   };
 }
 
@@ -103,6 +111,7 @@ test('runtime recovery reconnects an HTTP tab and completes the audit without re
   const h = recoveryHarness({ connection: { ok: true, recovered: true, injected: true } });
   await vm.runInContext('refresh()', h.context);
   assert.equal(h.ensureCalls, 1);
+  assert.equal(h.reinjectCalls, 0);
   assert.equal(h.state.report.facts.url, 'https://example.test/');
   assert.equal(h.renderCalls, 1);
   assert.ok(h.statuses.some((item) => item.title === 'Reconnected to page'));
@@ -116,6 +125,7 @@ test('runtime recovery explains unsupported Firefox pages without attempting inj
   const h = recoveryHarness({ tab: { id: 4, url: 'about:addons' } });
   await vm.runInContext('refresh()', h.context);
   assert.equal(h.ensureCalls, 0);
+  assert.equal(h.reinjectCalls, 0);
   assert.equal(h.state.report, null);
   assert.equal(h.statuses.at(-1).title, 'Firefox page cannot be inspected');
   assert.match(h.statuses.at(-1).detail, /HTTP or HTTPS/);
@@ -129,23 +139,72 @@ test('runtime recovery reports protected/restricted page access when injection i
   });
   await vm.runInContext('refresh()', h.context);
   assert.equal(h.ensureCalls, 1);
+  assert.equal(h.reinjectCalls, 0);
   assert.equal(h.state.report, null);
   assert.equal(h.statuses.at(-1).title, 'Page access unavailable');
   assert.match(h.statuses.at(-1).detail, /did not allow/);
   assert.equal(h.tabMessages.length, 0);
 });
 
-test('runtime recovery distinguishes an audit exception from a missing content script', async () => {
+test('runtime recovery refreshes a responsive but broken content bundle and retries the audit once', async () => {
+  let analyzeCalls = 0;
   const h = recoveryHarness({
     connection: { ok: true, recovered: false, injected: false },
-    analyzeError: new Error('renderer dependency exploded'),
+    repairConnection: { ok: true, recovered: true, injected: true },
+    tabSendMessage(_tabId, message) {
+      if (message.type === 'seoInspector.analyze') {
+        analyzeCalls += 1;
+        if (analyzeCalls === 1) throw new ReferenceError('PageType is not defined');
+        return {
+          facts: { url: 'https://example.test/', robots: [] },
+          responseMeta: null,
+          evaluation: { indexability: { verdict: 'Indexable' } },
+        };
+      }
+      return { ok: true };
+    },
   });
   await vm.runInContext('refresh()', h.context);
   assert.equal(h.ensureCalls, 1);
+  assert.equal(h.reinjectCalls, 1);
+  assert.equal(analyzeCalls, 2);
+  assert.equal(h.state.report.facts.url, 'https://example.test/');
+  assert.equal(h.state.connection.recoveredAfterAuditFailure, true);
+  assert.deepEqual(h.tabMessages.map((item) => item.message.type), [
+    'seoInspector.analyze',
+    'seoInspector.analyze',
+    'seoInspector.watch',
+  ]);
+});
+
+test('runtime recovery distinguishes a repeated audit exception and exposes only a sanitized local diagnostic', async () => {
+  const h = recoveryHarness({
+    connection: { ok: true, recovered: false, injected: false },
+    repairConnection: { ok: true, recovered: true, injected: true },
+    analyzeError: new Error('renderer dependency exploded at https://private.example/path'),
+  });
+  await vm.runInContext('refresh()', h.context);
+  assert.equal(h.ensureCalls, 1);
+  assert.equal(h.reinjectCalls, 1);
   assert.equal(h.state.report, null);
   assert.equal(h.statuses.at(-1).title, 'Audit failed');
+  assert.match(h.statuses.at(-1).detail, /Local diagnostic: Error: renderer dependency exploded/);
   assert.match(h.statuses.at(-1).detail, /runtime error/);
+  assert.doesNotMatch(h.statuses.at(-1).detail, /private\.example/);
   assert.equal(h.state.lastRuntimeError.name, 'Error');
+  assert.deepEqual(h.tabMessages.map((item) => item.message.type), ['seoInspector.analyze', 'seoInspector.analyze']);
+});
+
+test('runtime recovery keeps the first audit diagnostic when runtime reinjection itself is unavailable', async () => {
+  const h = recoveryHarness({
+    connection: { ok: true, recovered: false, injected: false },
+    analyzeError: new TypeError('collector failed'),
+  });
+  await vm.runInContext('refresh()', h.context);
+  assert.equal(h.reinjectCalls, 1);
+  assert.equal(h.state.report, null);
+  assert.equal(h.state.lastRuntimeError.name, 'TypeError');
+  assert.match(h.statuses.at(-1).detail, /TypeError: collector failed/);
   assert.deepEqual(h.tabMessages.map((item) => item.message.type), ['seoInspector.analyze']);
 });
 
