@@ -80,6 +80,34 @@ test('ensure injects the manifest content bundle once when an existing tab lost 
   }]);
 });
 
+test('reinject refreshes the packaged content bundle even when the old listener still answers ping', async () => {
+  const injections = [];
+  let pings = 0;
+  const browser = {
+    tabs: {
+      async sendMessage(tabId, message) {
+        assert.equal(tabId, 11);
+        assert.equal(message.type, 'seoInspector.ping');
+        pings += 1;
+        return { ok: true, url: 'https://example.test/' };
+      },
+    },
+    scripting: {
+      async executeScript(options) { injections.push(options); },
+    },
+    runtime: { getManifest: manifest },
+  };
+  const result = await ContentConnection.reinject(browser, 11, manifest());
+  assert.equal(result.ok, true);
+  assert.equal(result.recovered, true);
+  assert.equal(result.injected, true);
+  assert.equal(pings, 1);
+  assert.deepEqual(injections, [{
+    target: { tabId: 11 },
+    files: ['lib/a.js', 'lib/b.js', 'content/content.js'],
+  }]);
+});
+
 test('ensure reports blocked injection instead of pretending a protected page needs a reload', async () => {
   const browser = {
     tabs: { async sendMessage() { throw new Error('No receiver'); } },

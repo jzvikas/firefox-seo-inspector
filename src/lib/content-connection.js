@@ -97,17 +97,14 @@
     }
   }
 
-  async function ensure(browserApi, tabId, manifest) {
-    const first = await ping(browserApi, tabId);
-    if (first.ok) return { ok: true, recovered: false, injected: false, response: first.response };
-
+  async function injectBundle(browserApi, tabId, manifest) {
     if (!browserApi || !browserApi.scripting || typeof browserApi.scripting.executeScript !== 'function') {
       return {
         ok: false,
         recovered: false,
         injected: false,
         code: 'scripting-unavailable',
-        error: first.error,
+        error: { name: 'ConnectionError', message: 'Firefox scripting API is unavailable.' },
       };
     }
 
@@ -148,6 +145,25 @@
     return { ok: true, recovered: true, injected: true, response: second.response };
   }
 
+  async function ensure(browserApi, tabId, manifest) {
+    const first = await ping(browserApi, tabId);
+    if (first.ok) return { ok: true, recovered: false, injected: false, response: first.response };
+    return injectBundle(browserApi, tabId, manifest);
+  }
+
+  async function reinject(browserApi, tabId, manifest) {
+    if (!Number.isInteger(tabId)) {
+      return {
+        ok: false,
+        recovered: false,
+        injected: false,
+        code: 'invalid-tab',
+        error: { name: 'ConnectionError', message: 'No inspectable tab is available for runtime recovery.' },
+      };
+    }
+    return injectBundle(browserApi, tabId, manifest);
+  }
+
   function failureMessage(url, result) {
     const access = inspectability(url);
     if (!access.supported) return access;
@@ -184,6 +200,7 @@
     contentScriptFiles,
     ping,
     ensure,
+    reinject,
     failureMessage,
   };
 });

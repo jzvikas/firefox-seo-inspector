@@ -47,6 +47,12 @@
     }
   }
 
+  function safelyDecodedPathname(value) {
+    const raw = String(value || '/');
+    try { return decodeURIComponent(raw).toLowerCase(); }
+    catch (_error) { return raw.toLowerCase(); }
+  }
+
   function schemaTypeCounts(facts) {
     const counts = {};
     for (const schema of Array.isArray(facts && facts.schemas) ? facts.schemas : []) {
@@ -81,7 +87,7 @@
       paginationPath: false,
     };
 
-    const path = decodeURIComponent(url.pathname || '/').toLowerCase();
+    const path = safelyDecodedPathname(url.pathname || '/');
     const searchParams = [];
     const filterParams = [];
     const paginationParams = [];

@@ -147,6 +147,13 @@ test('URL parser keeps pagination/filter signals deterministic and ignores page=
   assert.deepEqual(parsed.filterParams, ['filter_brand', 'sort']);
 });
 
+test('malformed percent escapes in a valid HTTP pathname cannot abort page-type detection', () => {
+  const parsed = PageType.urlSignals('https://example.test/catalog/%E0%A4%A?filter_brand=x');
+  assert.equal(parsed.valid, true);
+  assert.deepEqual(parsed.filterParams, ['filter_brand']);
+  assert.doesNotThrow(() => PageType.detect(facts({ url: 'https://example.test/catalog/%E0%A4%A' }), { statusCode: 200 }));
+});
+
 test('schema type counts are case-normalized and ignore invalid JSON-LD records', () => {
   const counts = PageType.schemaTypeCounts(facts({
     schemas: [schema('Product'), schema('product'), { valid: false, types: ['Product'] }],

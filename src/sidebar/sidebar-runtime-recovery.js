@@ -30,6 +30,13 @@ function refreshIsCurrent(generation) {
   return Number(state.refreshGeneration) === Number(generation);
 }
 
+function auditFailureDetail(info) {
+  const diagnostic = info && info.message
+    ? `${info.name || 'Error'}: ${info.message}`
+    : (info && info.name ? String(info.name) : 'Unknown runtime error');
+  return `The page connection is active, but the audit did not complete. Local diagnostic: ${diagnostic}. Use Refresh; if it repeats, this is an Inspector runtime error rather than a page reload issue.`;
+}
+
 refresh = async function refreshWithContentRecovery() {
   const generation = beginRefreshGeneration();
   setStatus('Analyzing…', '');
@@ -58,9 +65,10 @@ refresh = async function refreshWithContentRecovery() {
   }
 
   const targetTabId = state.tabId;
+  let manifest = null;
   let connection;
   try {
-    const manifest = browser.runtime && typeof browser.runtime.getManifest === 'function'
+    manifest = browser.runtime && typeof browser.runtime.getManifest === 'function'
       ? browser.runtime.getManifest()
       : null;
     connection = await ContentConnection.ensure(browser, targetTabId, manifest);
@@ -86,13 +94,42 @@ refresh = async function refreshWithContentRecovery() {
   }
 
   let report;
+  let firstAuditError = null;
   try {
     report = await browser.tabs.sendMessage(targetTabId, { type: 'seoInspector.analyze' });
   } catch (error) {
     if (!refreshIsCurrent(generation)) return;
-    state.lastRuntimeError = ContentConnection.safeError(error);
-    renderNoReportStatus('Audit failed', 'The page connection is active, but the audit did not complete. Use Refresh; if it repeats, this is an Inspector runtime error rather than a page reload issue.');
-    return;
+    firstAuditError = ContentConnection.safeError(error);
+
+    let repair = null;
+    if (typeof ContentConnection.reinject === 'function') {
+      try {
+        repair = await ContentConnection.reinject(browser, targetTabId, manifest);
+      } catch (repairError) {
+        repair = {
+          ok: false,
+          code: 'runtime-reinjection-failed',
+          error: ContentConnection.safeError(repairError),
+        };
+      }
+    }
+    if (!refreshIsCurrent(generation)) return;
+
+    if (repair && repair.ok) {
+      state.connection = Object.assign({}, repair, { recoveredAfterAuditFailure: true });
+      try {
+        report = await browser.tabs.sendMessage(targetTabId, { type: 'seoInspector.analyze' });
+      } catch (retryError) {
+        if (!refreshIsCurrent(generation)) return;
+        state.lastRuntimeError = ContentConnection.safeError(retryError);
+        renderNoReportStatus('Audit failed', auditFailureDetail(state.lastRuntimeError));
+        return;
+      }
+    } else {
+      state.lastRuntimeError = firstAuditError;
+      renderNoReportStatus('Audit failed', auditFailureDetail(state.lastRuntimeError));
+      return;
+    }
   }
   if (!refreshIsCurrent(generation)) return;
 
