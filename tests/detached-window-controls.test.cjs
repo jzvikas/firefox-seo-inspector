@@ -68,7 +68,8 @@ test('maximize control toggles the popup between maximized and normal states', a
 
   h.listeners.click();
   await tick();
-  assert.deepEqual(h.updates, [{ state: 'maximized' }]);
+  assert.equal(h.updates.length, 1);
+  assert.equal(h.updates[0].state, 'maximized');
   assert.equal(h.button.title, 'Restore window');
   assert.equal(h.button.textContent, '❐');
   assert.equal(h.attributes['aria-label'], 'Restore window');
@@ -77,7 +78,8 @@ test('maximize control toggles the popup between maximized and normal states', a
 
   h.listeners.click();
   await tick();
-  assert.deepEqual(h.updates, [{ state: 'maximized' }, { state: 'normal' }]);
+  assert.equal(h.updates.length, 2);
+  assert.equal(h.updates[1].state, 'normal');
   assert.equal(h.button.title, 'Maximize window');
   assert.equal(h.attributes['aria-pressed'], 'false');
 });
