@@ -217,7 +217,6 @@
       return null;
     }
   }
-
   function comparableUrl(value) {
     const url = safeUrl(value);
     if (!url) return '';
@@ -233,18 +232,20 @@
     const url = safeUrl(value);
     if (!url) return [];
     const result = [];
-    for (const [rawName, rawValue] of url.searchParams.entries()) {
-      const name = rawName.toLowerCase();
-      if (!clean(rawValue)) continue;
-      if (VARIANT_PARAMS.has(name) || name.startsWith('variant_') || name.startsWith('option_') || name.startsWith('attribute_')) result.push(rawName);
-    }
+    url.searchParams.forEach((rawValue, rawName) => {
+      const name = String(rawName || '').toLowerCase();
+      if (!clean(rawValue)) return;
+      if (VARIANT_PARAMS.has(name) || name.startsWith('variant_') || name.startsWith('option_') || name.startsWith('attribute_')) result.push(String(rawName));
+    });
     return Array.from(new Set(result));
   }
 
   function stripVariantParams(value) {
     const url = safeUrl(value);
     if (!url) return '';
-    for (const name of Array.from(url.searchParams.keys())) {
+    const names = [];
+    url.searchParams.forEach((_rawValue, rawName) => names.push(String(rawName)));
+    for (const name of names) {
       const lower = name.toLowerCase();
       if (VARIANT_PARAMS.has(lower) || lower.startsWith('variant_') || lower.startsWith('option_') || lower.startsWith('attribute_')) url.searchParams.delete(name);
     }
